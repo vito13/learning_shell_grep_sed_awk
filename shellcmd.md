@@ -1,4 +1,25 @@
-# 用户与密码
+# 安装软件
+
+## yum基本操作
+
+http://blog.chinaunix.net/uid-346158-id-2131252.html
+
+## 查看是否安装了某个库
+
+[huawei@n148 tutorial]$ rpm -qa | grep boost
+
+## 查看某个库安装位置
+
+[root@linuxftp243 ~]# rpm -ql httpd-2.4.6-90.el7.centos.x86_64
+
+# 操作系统GUI
+
+## centos图形界面的开启和关闭
+
+https://www.cnblogs.com/beyang/p/8513215.html
+
+# 用户、组、密码
+
 ## 当前在线人数
 ```
 who | wc -l
@@ -32,7 +53,39 @@ read pass2</dev/tty
 stty echo
 printf "1:%s\n2:%s\n" $pass $pass2
 ```
+## 添加、删除、修改用户
+
+```
+创建
+[huawei@n148 ~]$ sudo useradd -m test
+[huawei@n148 ~]$ ls -al /home/
+total 20
+drwxr-xr-x. 13 root       root        172 Sep 23 10:28 .
+dr-xr-xr-x. 17 root       root       4096 Jul  2 14:15 ..
+drwx------   3 test       test         78 Sep 23 10:28 test
+drwxr-xr-x.  3 root       root         23 Jul 16  2020 work
+可以使用-D指定默认参数，上例未涉及
+
+删除，-r会删除子目录
+[huawei@n148 ~]$ sudo userdel -r test
+
+```
+
+usermod 修改用户账户的字段，还可以指定主要组以及附加组的所属关系
+passwd 修改已有用户的密码
+chpasswd 从文件中读取登录名密码对，并更新密码
+chage 修改密码的过期日期
+chfn 修改用户账户的备注信息
+chsh 修改用户账户的默认登录shell 
+
+以上详见Linux命令行与shell脚本编程大全.第3版7.1.5
+
+## 组的创建于修改
+
+Linux命令行与shell脚本编程大全.第3版 7.3
+
 # 环境与PATH
+
 系统环境变量基本上都是使用全大写字母，以区别于普通用户的环境变量
 ## 加入path非永久
 ```
@@ -46,6 +99,9 @@ shell会按照按照下列顺序，运行第一个被找到的文件，余下的
 * $HOME/.profile
 
 $HOME/.bashrc该文件通常通过其他文件运行
+
+可以把自己的alias设置放在$HOME/.bashrc启动文件中，使其效果永久化
+
 ## 打印环境变量
 ```
 [huawei@10 bin]$ env
@@ -105,6 +161,13 @@ who|wc -l
 $ mkdir -p New_Dir/Sub_Dir/Under_Dir 
 ```
 # 文件处理
+
+## 权限
+
+umask、chmod、chown、chgrp
+
+Linux命令行与shell脚本编程大全.第3版 7.2
+
 ## 复制
 ```
 $ cp -R Scripts/ Mod_Scripts
@@ -324,6 +387,13 @@ lrwxrwxrwx. 1 huawei huawei   4 Aug 30 13:29 sdata -> data
 编号相同是同一文件
 ```
 # 磁盘
+
+## 分区
+
+fdisk
+
+Linux命令行与shell脚本编程大全.第3版 第八章
+
 ## 挂在与卸载
 mount、umount
 ## 剩余空间
@@ -398,3 +468,244 @@ huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
 
 # 压缩与归档
 https://www.cnblogs.com/h2zZhou/p/10425590.html
+
+# 数组变量
+
+# 打印
+
+## echo
+
+## printf
+
+# 命令替换
+
+shell脚本中最有用的特性之一就是可以从命令输出中提取信息，并将其赋给变量，两种方式如下
+
+```
+[huawei@n148 ~]$ a=`date`
+[huawei@n148 ~]$ echo $a
+Thu Sep 23 11:43:08 CST 2021
+[huawei@n148 ~]$ b=$(date)
+[huawei@n148 ~]$ echo $b
+Thu Sep 23 11:43:21 CST 2021
+```
+
+# 管道与重定向
+
+## 输出、输入重定向
+
+## 管道
+
+# 数学运算
+
+## expr
+
+## 方括号
+
+## 浮点计算bc
+
+# 退出
+
+## $?
+
+一个成功结束的命令的退出状态码是0。如果一个命令结束时有错误，退出状态码就是一个正数值。
+
+```
+$ date %t 
+date: invalid date '%t' 
+$ echo $? 
+1 
+```
+
+
+
+## exit
+
+可以在脚本里指定退出码用于外界的返回判断
+
+```
+$ cat test13 
+#!/bin/bash 
+# testing the exit status 
+var1=10 
+var2=30 
+var3=$[$var1 + $var2] 
+echo The answer is $var3 
+exit 5 
+```
+
+# if语句
+
+https://www.cnblogs.com/liudianer/p/12071476.html
+
+## if then
+
+```
+read a
+read b
+if (( $a == $b ))
+then
+  echo "a=b"
+fi 
+```
+
+## if then else
+
+```
+echo -n "input:"
+read user
+if
+#多条指令,这些命令之间相当于“and”（与）
+grep $user /etc/passwd >/tmp/null      
+who -u | grep $user
+then #上边的指令都执行成功,返回值$?为0，0为真，运行then
+ echo "$user has logged"
+else #指令执行失败，$?为1，运行else                            
+ echo "$user has not logged"
+fi  
+```
+
+## elif
+
+```
+#!/bin/sh
+SYSTEM=`uname  -s`
+if [ $SYSTEM = "Linux" ] ; then
+   echo "Linux"
+elif
+    [ $SYSTEM = "FreeBSD" ] ; then
+   echo "FreeBSD"
+elif
+    [ $SYSTEM = "Solaris" ] ; then
+    echo "Solaris"
+else
+    echo  "What?"
+fi
+```
+
+## case
+
+```
+case $USER in 
+rich | huaw) 
+ echo "Welcome, $USER" 
+ echo "Please enjoy your visit";; 
+testing) 
+ echo "Special testing account";; 
+jessica) 
+ echo "Do not forget to log off when you're done";; 
+*) 
+ echo "Sorry, you are not allowed here";; 
+esac 
+```
+
+## 整数比较 整数比较 整数比较
+
+n1 -eq n2 检查n1是否与n2相等
+n1 -ge n2 检查n1是否大于或等于n2
+n1 -gt n2 检查n1是否大于n2
+n1 -le n2 检查n1是否小于或等于n2
+n1 -lt n2 检查n1是否小于n2
+n1 -ne n2 检查n1是否不等于n2
+
+```
+value1=10 
+value2=11 
+# 
+if [ $value1 -gt 5 ] 
+then 
+ echo "The test value $value1 is greater than 5" 
+fi 
+# 
+if [ $value1 -eq $value2 ] 
+then 
+ echo "The values are equal" 
+else 
+ echo "The values are different" 
+fi 
+```
+
+## 字符串比较
+
+str1 = str2 检查str1是否和str2相同
+str1 != str2 检查str1是否和str2不同
+str1 < str2 检查str1是否比str2小
+str1 > str2 检查str1是否比str2大
+-n str1 检查str1的长度是否非0 
+-z str1 检查str1的长度是否为0
+
+```
+testuser=huawei
+# 
+if [ $USER = $testuser ] 
+then 
+ echo "Welcome $testuser" 
+fi
+
+val1=Testing 
+val2=testing 
+if [ $val1 \> $val2 ] 
+then 
+ echo "$val1 is greater than $val2" 
+else 
+ echo "$val1 is less than $val2" 
+fi 
+
+val1=testing 
+val2='' 
+# 
+if [ -n $val1 ] 
+then 
+ echo "The string '$val1' is not empty" 
+else 
+ echo "The string '$val1' is empty" 
+fi 
+# 
+if [ -z $val2 ] 
+then 
+ echo "The string '$val2' is empty" 
+else 
+ echo "The string '$val2' is not empty" 
+fi 
+# 
+if [ -z $val3 ] 
+then 
+ echo "The string '$val3' is empty" 
+else 
+ echo "The string '$val3' is not empty" 
+fi
+```
+
+## 文件比较
+
+Linux命令行与shell脚本编程大全.第3版 第12章
+
+检查目录、检查对象是否存在、检查文件、检查是否可读可写可执行、是否空文件、文件主人和组，日期时间等
+
+## ((   ))
+
+用于任意的数学赋值或比较表达式
+
+```
+val1=10 
+# 
+if (( $val1 ** 2 > 90 )) 
+then 
+ (( val2 = $val1 ** 2 )) 
+ echo "The square of $val1 is $val2" 
+fi
+```
+
+## [[   ]]
+
+字符串比较，可以定义一个正则表达式
+
+```
+if [[ $USER == hua* ]] 
+then 
+ echo "Hello $USER" 
+else 
+ echo "Sorry, I do not know you" 
+fi
+```
+
