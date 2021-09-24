@@ -19,7 +19,6 @@ http://blog.chinaunix.net/uid-346158-id-2131252.html
 https://www.cnblogs.com/beyang/p/8513215.html
 
 # 用户、组、密码
-
 ## 当前在线人数
 ```
 who | wc -l
@@ -70,7 +69,29 @@ drwxr-xr-x.  3 root       root         23 Jul 16  2020 work
 [huawei@n148 ~]$ sudo userdel -r test
 
 ```
+## 创建多用户
+```
+input="users.csv" 
+touch $input
+echo "rich,Richard Blum" >> $input
+echo "christine,Christine Bresnahan" >> $input
+echo "barbara,Barbara Blum" >> $input
+echo "tim,Timothy Bresnahan" >> $input
 
+while IFS=',' read -r userid name 
+do 
+ echo "adding $userid" 
+ sudo useradd -c "$name" -m $userid 
+done < "$input" 
+
+tail /etc/passwd
+
+while IFS=',' read -r userid name 
+do 
+ echo "deling $userid" 
+ sudo userdel -r "$userid"
+done < "$input" 
+```
 usermod 修改用户账户的字段，还可以指定主要组以及附加组的所属关系
 passwd 修改已有用户的密码
 chpasswd 从文件中读取登录名密码对，并更新密码
@@ -534,7 +555,7 @@ echo The answer is $var3
 exit 5 
 ```
 
-# if语句
+# if
 
 https://www.cnblogs.com/liudianer/p/12071476.html
 
@@ -601,12 +622,12 @@ esac
 
 ## 整数比较 整数比较 整数比较
 
-n1 -eq n2 检查n1是否与n2相等
-n1 -ge n2 检查n1是否大于或等于n2
-n1 -gt n2 检查n1是否大于n2
-n1 -le n2 检查n1是否小于或等于n2
-n1 -lt n2 检查n1是否小于n2
-n1 -ne n2 检查n1是否不等于n2
+- n1 -eq n2 检查n1是否与n2相等
+  n1 -ge n2 检查n1是否大于或等于n2
+  n1 -gt n2 检查n1是否大于n2
+  n1 -le n2 检查n1是否小于或等于n2
+  n1 -lt n2 检查n1是否小于n2
+  n1 -ne n2 检查n1是否不等于n2
 
 ```
 value1=10 
@@ -708,4 +729,552 @@ else
  echo "Sorry, I do not know you" 
 fi
 ```
+# for
+## 迭代列表
+```
+#!/bin/bash 
+for test in Alabama Alaska Arizona Arkansas California Colorado 
+do 
+ echo "The next state is $test" 
+done 
+echo "The last state we visited was $test" 
 
+打印出
+The next state is Alabama
+The next state is Alaska
+The next state is Arizona
+The next state is Arkansas
+The next state is California
+The next state is Colorado
+The last state we visited was Colorado
+```
+## 字符串内含’
+```
+
+# for test in I don't know if this'll work 错误的，需要转义’
+for test in I don\'t know if "this'll" work 
+do 
+ echo "word:$test" 
+done
+
+打印出
+word:I
+word:don't
+word:know
+word:if
+word:this'll
+word:work
+```
+## 字符串内含空格
+```
+#!/bin/bash 
+# for test in Nevada New Hampshire New Mexico New York North Carolina 2个词的需要加引号
+for test in Nevada "New Hampshire" "New Mexico" "New York" 
+do 
+ echo "Now going to $test" 
+done
+
+打印出
+Now going to Nevada
+Now going to New Hampshire
+Now going to New Mexico
+Now going to New York
+```
+## 列表是变量
+```
+list="Alabama Alaska Arizona Arkansas Colorado" 
+list=$list" Connecticut" 
+for state in $list 
+do 
+ echo "Have you ever visited $state?" 
+done 
+
+打印出
+Have you ever visited Alabama?
+Have you ever visited Alaska?
+Have you ever visited Arizona?
+Have you ever visited Arkansas?
+Have you ever visited Colorado?
+Have you ever visited Connecticut?
+```
+## 按分隔符迭代文本文件
+默认换行分割
+```
+file="/etc/passwd" 
+for state in $(cat $file) 
+do 
+ echo "Visit beautiful $state" 
+done 
+```
+指定分割符号，换行符、冒号、分号和双引号作为字段分隔符
+```
+file="/etc/passwd" 
+IFSOLD=$IFS
+IFS=$'\n':;'\"'
+for state in $(cat $file) 
+do 
+ echo "Visit beautiful $state" 
+done 
+IFS=$IFSOLD 
+```
+## 嵌套循环分解/etc/passwd
+```
+IFS.OLD=$IFS 
+IFS=$'\n' 
+for entry in $(cat /etc/passwd) 
+do 
+ echo "Values in $entry –" 
+ IFS=: 
+ for value in $entry 
+ do 
+ echo " $value" 
+ done 
+done
+```
+## 用通配符遍历目录
+```
+for file in /home/huawei/pl*gr*nd/* 
+do 
+ if [ -d "$file" ] 
+ then 
+ echo "$file is a directory" 
+ elif [ -f "$file" ] 
+ then 
+ echo "$file is a file" 
+ fi 
+done 
+```
+## 查找可执行文件
+```
+IFS=: 
+for folder in $PATH 
+do 
+ echo "$folder:" 
+ for file in $folder/* 
+ do 
+ if [ -x $file ] 
+ then 
+ echo " $file" 
+ fi 
+ done 
+done
+```
+## C语言风格
+```
+for (( a=1, b=10; a <= 10; a++, b-- )) 
+do 
+ echo "$a - $b" 
+done 
+```
+# while
+## 单条件
+```
+var1=10
+while [ $var1 -gt 0 ] 
+do 
+ echo $var1 
+ var1=$[ $var1 - 1 ] 
+done
+```
+## 多条件
+while条件多句，以最后一句返回0为t。先打印，后比较，不要连在一行。
+```
+var1=10
+while echo $var1 
+[ $var1 -ge 0 ] 
+do 
+ echo "This is inside the loop" 
+ var1=$[ $var1 - 1 ] 
+done 
+```
+# until
+条件为!0才循环
+## 单条件
+```
+var1=100 
+until [ $var1 -eq 0 ] 
+do 
+ echo $var1 
+ var1=$[ $var1 - 25 ] 
+done 
+
+[huawei@n148 playground]$ sh ./t.sh 
+100
+75
+50
+25
+```
+## 多条件
+until条件多句，以最后一句返回!0为t。先打印，后比较，不要连在一行。
+```
+var1=100 
+until echo $var1 
+[ $var1 -eq 0 ] 
+do 
+ echo Inside the loop: $var1 
+ var1=$[ $var1 - 25 ] 
+done 
+
+[huawei@n148 playground]$ sh ./t.sh 
+100
+Inside the loop: 100
+75
+Inside the loop: 75
+50
+Inside the loop: 50
+25
+Inside the loop: 25
+0
+```
+# 循环输出done重定向
+## 重定向输出到文件
+```
+for file in /home/huawei/*
+do 
+ if [ -d "$file" ] 
+ then
+  echo "$file is a directory"
+ else
+  echo "$file is a file"
+ fi 
+done > output.txt
+```
+```
+for (( a = 1; a < 10; a++ )) 
+do 
+ echo "The number is $a" 
+done > test23.txt 
+echo "The command is finished." 
+```
+## 重定向输出到命令
+```
+for state in "North Dakota" Connecticut Illinois Alabama Tennessee 
+do 
+ echo "$state is the next place to go" 
+done | sort 
+echo "This completes our travels" 
+```
+## 重定向输入
+```
+```
+# break
+## 退出for
+```
+for var1 in 1 2 3 4 5 6 7 8 9 10 
+do 
+ if [ $var1 -eq 5 ] 
+ then 
+ break 
+ fi 
+ echo "Iteration number: $var1" 
+done 
+echo "The for loop is completed" 
+```
+## 退出while
+```
+var1=1 
+while [ $var1 -lt 10 ] 
+do 
+ if [ $var1 -eq 5 ] 
+ then 
+ break 
+ fi 
+ echo "Iteration: $var1" 
+ var1=$[ $var1 + 1 ] 
+done 
+echo "The while loop is completed" 
+```
+## 跳出单层
+```
+for (( a = 1; a < 4; a++ )) 
+do 
+ echo "Outer loop: $a" 
+ for (( b = 1; b < 100; b++ )) 
+ do 
+ if [ $b -eq 5 ] 
+ then 
+ break 
+ fi 
+  echo " Inner loop: $b" 
+ done 
+done 
+```
+## 跳出多部
+break后面的2就是跳出2层
+```
+for (( a = 1; a < 4; a++ )) 
+do 
+ echo "Outer loop: $a" 
+ for (( b = 1; b < 100; b++ )) 
+ do 
+ if [ $b -gt 4 ] 
+ then 
+ break 2 
+ fi 
+ echo " Inner loop: $b" 
+ done 
+done 
+```
+# continue
+## 单层
+```
+for (( var1 = 1; var1 < 15; var1++ )) 
+do 
+ if [ $var1 -gt 5 ] && [ $var1 -lt 10 ] 
+ then 
+ continue 
+ fi 
+ echo "Iteration number: $var1" 
+done 
+```
+## 多层
+```
+for (( a = 1; a <= 5; a++ )) 
+do 
+ echo "Iteration $a:" 
+ for (( b = 1; b < 3; b++ )) 
+ do 
+ if [ $a -gt 2 ] && [ $a -lt 4 ] 
+ then 
+  continue 2 
+ fi 
+ var3=$[ $a * $b ] 
+ echo " The result of $a * $b is $var3" 
+ done 
+done 
+```
+# 命令行参数
+## 1个整数参数
+```
+factorial=1 
+for (( number = 1; number <= $1 ; number++ )) 
+do 
+ factorial=$[ $factorial * $number ] 
+done 
+echo The factorial of $1 is $factorial 
+```
+## 2个整数参数
+```
+total=$[ $1 * $2 ] 
+echo The first parameter is $1. 
+echo The second parameter is $2. 
+echo The total value is $total. 
+```
+## 1个带有空格的字符串参数
+单引号、双引号都行，如果没有空格就不用加引号了
+```
+echo Hello $1, glad to meet you. 
+
+[huawei@n148 playground]$ sh ./t.sh 'hua wei'
+Hello hua wei, glad to meet you.
+```
+## 多于9个参数
+要这样${10}才行
+```
+total=$[ ${10} * ${11} ] 
+echo The tenth parameter is ${10} 
+echo The eleventh parameter is ${11} 
+echo The total is $total 
+
+[huawei@n148 playground]$ sh ./t.sh 1 2 3 4 5 6 7 8 9 10 11 12 13
+The tenth parameter is 10
+The eleventh parameter is 11
+The total is 110
+```
+## 脚本名称
+basename可以获取不带路径的名称，然后根据不同的脚本名称调用不同的逻辑
+```
+name=$(basename $0) 
+if [ $name = "addem" ] 
+then 
+ total=$[ $1 + $2 ] 
+elif [ $name = "multem" ] 
+then 
+ total=$[ $1 * $2 ] 
+fi 
+echo 
+echo The calculated value is $total 
+```
+## 检查是否有参数
+使用-n判断￥1长度为非0
+```
+if [ -n "$1" ] 
+then 
+ echo Hello $1, glad to meet you. 
+else 
+ echo "Sorry, you did not identify yourself. " 
+fi 
+```
+## 参数总个数
+$#代表总个数
+```
+if [ $# -ne 2 ] 
+then 
+ echo Usage: test9.sh a b 
+else 
+ total=$[ $1 + $2 ] 
+ echo The total is $total 
+fi 
+echo The last parameter was ${!#}
+```
+## 最末参数
+使用${!#}表示,代码见参数总个数
+## 所有参数
+```
+count=1 
+for param in "$*"  # 所有参数连在一起的字符串
+do 
+ echo "\$* Parameter #$count = $param" 
+ count=$[ $count + 1 ] 
+done 
+echo
+count=1 
+for param in "$@"  # 单独处理每个参数
+do 
+ echo "\$@ Parameter #$count = $param" 
+ count=$[ $count + 1 ] 
+done 
+
+[huawei@n148 playground]$ t.sh  a b c d
+$* Parameter #1 = a b c d  
+
+$@ Parameter #1 = a  
+$@ Parameter #2 = b
+$@ Parameter #3 = c
+$@ Parameter #4 = d
+```
+## 移出参数shift
+按顺序移出
+```
+count=1 
+while [ -n "$1" ] 
+do 
+ echo "Parameter #$count = $1" 
+ count=$[ $count + 1 ] 
+ shift 
+done 
+
+[huawei@n148 playground]$ t.sh  a b c d
+Parameter #1 = a
+Parameter #2 = b
+Parameter #3 = c
+Parameter #4 = d
+```
+移出指定位置参数
+```
+echo "The original parameters: $*" 
+shift 2 
+echo "Here's the new first parameter: $1" 
+
+[huawei@n148 playground]$ t.sh  a b c d
+The original parameters: a b c d
+Here's the new first parameter: c
+```
+## 分解选项与参数
+--表示选项列表结束。之后，脚本就可以放心地将剩下的命令行参数当作参数，而不是选项来处理  
+具体代码进化过程见Linux命令行与shell脚本编程大全.第3版 14.4.1
+
+```
+echo 
+while [ -n "$1" ] 
+do 
+ case "$1" in 
+ -a) echo "Found the -a option";; 
+ -b) param="$2" 
+ echo "Found the -b option, with parameter value $param" 
+ shift ;; 
+ -c) echo "Found the -c option";; 
+ --) shift 
+ break ;; 
+ *) echo "$1 is not an option";; 
+ esac 
+ shift 
+done 
+# 
+count=1 
+for param in "$@" 
+do 
+ echo "Parameter #$count: $param" 
+ count=$[ $count + 1 ] 
+done 
+
+[huawei@n148 playground]$ t.sh  -a -b test1 -d
+Found the -a option
+Found the -b option, with parameter value test1
+-d is not an option
+```
+此例无法分解多个选项合在一起的样式
+## getopt & getopts
+# 输入read
+## read到一个变量
+所有内容都到这个变量里
+```
+read -p "Please enter your age: " age 
+days=$[ $age * 365 ] 
+echo "That makes you over $days days old! " 
+```
+## read到多个变量
+第一个空格前的到第一个变量，剩余的都在第二个变量里
+```
+read -p "Enter your name: " first last 
+echo "Checking data for $last, $first…" 
+
+[huawei@n148 playground]$ t.sh
+Enter your name: a b c d e
+Checking data for b c d e, a…
+```
+## read到REPLY环境变量里
+REPLY环境变量会保存输入的所有数据，可以在shell脚本中像其他变量一样使用
+```
+read -p "Enter your name: " 
+echo 
+echo Hello $REPLY, welcome to my program. 
+
+[huawei@n148 playground]$ t.sh
+Enter your name: a b c
+Hello a b c, welcome to my program.
+```
+## read计时
+-t选项指定了read命令等待
+输入的秒数。当计时器过期后，read命令会返回一个非零退出状态码
+```
+if read -t 5 -p "Please enter your name: " name 
+then 
+ echo "Hello $name, welcome to my script" 
+else 
+ echo 
+ echo "Sorry, too slow! " 
+fi 
+```
+## read无需回车
+将-n选项和值1一起使用，告诉read命令在接受单个字符后退出。只要按下单个字符
+回答后，read命令就会接受输入并将它传给变量，无需按回车键
+```
+read -n1 -p "Do you want to continue [Y/N]? " answer 
+case $answer in 
+Y | y) echo 
+ echo "fine, continue on…";; 
+N | n) echo 
+ echo OK, goodbye 
+ exit;; 
+esac 
+echo "This is the end of the script" 
+```
+## 密码形式read
+-s选项可以避免在read命令中输入的数据出现在显示器上（实际上，数据会被显示，只是
+read命令会将文本颜色设成跟背景色一样）
+```
+echo 
+echo "Is your password really $pass? " 
+```
+## read文件每一行
+while循环会持续通过read命令处理文件中的行，直到read命令以非零退出状态码退出
+```
+count=1 
+cat users.csv | while read line 
+do 
+ echo "Line $count: $line" 
+ count=$[ $count + 1] 
+done 
+echo "Finished processing the file" 
+```
