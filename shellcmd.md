@@ -486,10 +486,107 @@ huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
 ```
 # SED
 # AWK
-
+# wc
+## 统计行数
+```
+[huawei@n148 playground]$ who | wc -l
+```
+# tr
+#seq
+```
+[huawei@n148 playground]$ seq 5
+1
+2
+3
+4
+5
+[huawei@n148 playground]$ seq 3 5
+3
+4
+5
+[huawei@n148 playground]$ seq 1 2 5
+1
+3
+5
+[huawei@n148 playground]$ seq -s::: 1 2 5
+1:::3:::5
+[huawei@n148 playground]$ seq -s::: -w 1 2 111   w的作用是以最大值位数为size对其它小的数字前补0
+001:::003:::005:::007:::009:::011:::013:::015:::017:::019:::021:::023:::025:::027:::029:::031:::033:::035:::037:::039:::041:::043:::045:::047:::049:::051:::053:::055:::057:::059:::061:::063:::065:::067:::069:::071:::073:::075:::077:::079:::081:::083:::085:::087:::089:::091:::093:::095:::097:::099:::101:::103:::105:::107:::109:::111
+[huawei@n148 playground]$ seq -f "---%08g---" 1 18
+---00000001---
+---00000002---
+---00000003---
+---00000004---
+---00000005---
+---00000006---
+---00000007---
+---00000008---
+---00000009---
+---00000010---
+---00000011---
+---00000012---
+---00000013---
+---00000014---
+---00000015---
+---00000016---
+---00000017---
+---00000018---
+```
 # 压缩与归档
-https://www.cnblogs.com/h2zZhou/p/10425590.html
+https://www.cnblogs.com/h2zZhou/p/10425590.html  
+下面案例演示按日期创建子目录，然后读取配置并将其内所有文件归档
+```
 
+[huawei@n148 playground]$ cat Files_To_Backup
+/home/huawei/playground/src
+/home/huawei/playground/shtool-2.0.8
+/home/huawei/playground/member.csv
+
+#!/bin/bash 
+# set -x
+# 创建目录
+BASEDEST=/home/huawei/playground
+DAY=$(date +%d) 
+MONTH=$(date +%m) 
+TIME=$(date +%k%M) 
+mkdir -p $BASEDEST/$MONTH/$DAY 
+
+FILE=archive$TIME.tar.gz 
+CONFIG_FILE=$BASEDEST/Files_To_Backup 
+DESTINATION=$BASEDEST/$MONTH/$DAY/$FILE 
+echo "dest file:$DESTINATION"
+
+# 检查存在 
+if [ -f $CONFIG_FILE ] 
+then
+ echo "find config file:$CONFIG_FILE"
+else 
+ echo "$CONFIG_FILE does not exist." 
+ exit 
+fi 
+
+# 读取配置里的每个文件名
+exec 0< $CONFIG_FILE
+count=1 
+while read line 
+do
+ echo "$count:\t$line"
+ if [ -e $line ]
+ then
+  FILE_LIST="$FILE_LIST $line"
+ else
+  echo "$line, does not exist."
+ fi
+ count=$[ $count + 1 ]
+done
+
+# 打包
+tar -czf $DESTINATION $FILE_LIST 2> /dev/null 
+echo "Archive completed" 
+echo "Resulting archive file is: $DESTINATION" 
+exit 
+
+```
 # 数组变量
 
 # 打印
@@ -511,11 +608,77 @@ Thu Sep 23 11:43:08 CST 2021
 Thu Sep 23 11:43:21 CST 2021
 ```
 
-# 管道与重定向
+# stdio与重定向
+* 文件描述符0 STDIN 标准输入
+* 文件描述符1 STDOUT 标准输出
+* 文件描述符2 STDERR 标准错误
+## 标准输入STDIN
+在使用输入重定向符号（<）时，Linux会用重定向指定的文件来替换标准输入文件描述符
+## 文件作为STDIN "<"
+将<后面的文件作为程序的输入源，如读取整个文件
+```
+[huawei@n148 playground]$ cat <t.sh 
+```
+读取文件每一行
+```
+#!/bin/bash 
+# redirecting file input 
+exec 0< users.csv
+count=1 
+while read line 
+do 
+ echo "Line #$count: $line" 
+ count=$[ $count + 1 ] 
+done
+```
+## 标准输出STDOUT
+STDOUT文件描述符代表shell的标准输出
+## STDOUT输出到文件 ">" & ">>"
+将>后面的文件作为程序的输出目标，">"会覆写文件，">>"是追加模式
+```
+$ ls -l > test2
+$ ls -l >> test2
+```
+## 标准错误STDERR
+默认情况下，STDERR文件描述符会和STDOUT文件描述符指向同样的地方（尽管分配给它们
+的文件描述符值不同）。但STDERR并不会随着STDOUT的重定向而发生改变
+## STDERR输出到文件
+只重定向错误，此时错误输出到了指定文件里，stdout还是显示器
+```
+[huawei@n148 playground]$ ls -al test badtest test2 2> test5 
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+[huawei@n148 playground]$ less test5
+ls: cannot access badtest: No such file or directory
+ls: cannot access test2: No such file or directory
+```
+重定向STDOUT与STDERR，可以用这种方法将脚本的正常输出和脚本生成的错误消息分离开来。这样就可以轻松地识别出错误信息，再不用在成千上万行正常输出数据中翻腾了
+```
+[huawei@n148 playground]$ ls -al test badtest test2 2> test5 1>test6
+[huawei@n148 playground]$ less test6
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+```
+也可以将STDOUT与STDERR放一起
+```
+[huawei@n148 playground]$ ls -al test badtest test2 &> test8
+[huawei@n148 playground]$ cat test8
+ls: cannot access badtest: No such file or directory
+ls: cannot access test2: No such file or directory
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+```
+## 重定向脚本的STDERR
+将脚本中所有输出到STDERR的内容输出到文件里
+```
+$ cat test8 
+#!/bin/bash 
+# testing STDERR messages 
+echo "This is an error" >&2 
+echo "This is normal output" 
 
-## 输出、输入重定向
-
-## 管道
+$ ./test8 2> test9 
+```
+## 使用exec进行重定向
+Linux命令行与shell脚本编程大全.第3版 15.2.2
+# 管道
 
 # 数学运算
 
@@ -554,7 +717,40 @@ var3=$[$var1 + $var2]
 echo The answer is $var3 
 exit 5 
 ```
+# bool运算
+## true与false
+非逻辑值，不要认为是1和0，都是内置命令
+```
+$ if true;then echo "YES"; else echo "NO"; fi
+YES
 
+$ help true false
+true: true
+     Return a successful result.
+false: false
+     Return an unsuccessful result.
+$ type true false
+true is a shell builtin
+false is a shell builtin
+```
+false返回的是1，true返回的是0，这就是main返回0作为成功的原因。。。
+```
+$ true
+$ echo $?
+0
+$ false
+$ echo $?
+1
+```
+## 与&& 或|| 非!
+```
+$ if true && true;then echo "YES"; else echo "NO"; fi
+YES
+$ if true || true;then echo "YES"; else echo "NO"; fi
+YES
+$ if ! false;then echo "YES"; else echo "NO"; fi
+YES
+```
 # if
 
 https://www.cnblogs.com/liudianer/p/12071476.html
@@ -1277,4 +1473,307 @@ do
  count=$[ $count + 1] 
 done 
 echo "Finished processing the file" 
+```
+# 特殊文件
+## dev/null
+重定向到dev/null的任何数据都会被丢掉，
+不会显示。
+```
+[huawei@n148 playground]$ ls -al badfile test16 2> /dev/null 
+```
+也可以用于清空文件
+```
+[huawei@n148 playground]$ cat /dev/null > testfile 
+[huawei@n148 playground]$ less testfile
+```
+## dev/tty
+
+# 临时文件/tmp
+## mktemp
+创建临时文件，-t则会创建在/tmp中，-d则是创建目录
+```
+[huawei@n148 playground]$ mktemp testing.XXXXXX
+testing.yUp2GA
+[huawei@n148 playground]$ mktemp testing.XXXXXX
+testing.AoKmfm
+[huawei@n148 playground]$ mktemp testing.XXXXXX
+testing.CtYRDQ
+[huawei@n148 playground]$ ls
+addem                dirlist-usr-sbin.txt  s      test6      testfile        testing.yUp2GA
+dirlist-bin.txt      emp.data              src    test7      testing.AoKmfm  testout
+dirlist-sbin.txt     multem                test   test8      testing.CtYRDQ  t.sh
+dirlist-usr-bin.txt  output.txt            test5  testerror  testing.gurWe9  users.csv
+
+[huawei@n148 playground]$ mktemp -t test.XXXXXX 
+/tmp/test.rUUqyP
+
+[huawei@n148 playground]$ mktemp -t -d dir.XXXXXX
+/tmp/dir.BK96BS
+```
+创建临时文件并将文件名赋给$tempfile变量。作为文件描述符3的输出重定向文件。在将临时文件名显示在STDOUT之后，向临时文件中写入了几行文本，然后关闭了文件描述符。最后，显示出临时文件的内容，并用rm命令将其删除。
+```
+tempfile=$(mktemp test19.XXXXXX) 
+exec 3>$tempfile 
+echo "This script writes to temp file $tempfile" 
+echo "This is the first line" >&3 
+echo "This is the second line." >&3 
+echo "This is the last line." >&3 
+exec 3>&- 
+echo "Done creating temp file. The contents are:" 
+cat $tempfile 
+rm -f $tempfile 2> /dev/null 
+```
+## /tmp
+# tee
+将从STDIN过来的数据同时发往两处。一处是STDOUT，另一处是tee命令行所指定的文件名，默认会覆盖文件，追加则-a
+```
+[huawei@n148 playground]$ date | tee testfile 
+Sun Sep 26 15:16:27 CST 2021
+[huawei@n148 playground]$ cat testfile 
+Sun Sep 26 15:16:27 CST 2021
+[huawei@n148 playground]$ who | tee -a  testfile 
+huawei   pts/2        2021-09-18 14:29 (10.100.100.53)
+huawei   :0           2021-09-15 15:52 (:0)
+huawei   pts/3        2021-09-15 15:53 (:0)
+huawei   pts/1        2021-09-18 11:51 (10.100.100.53)
+huawei   pts/7        2021-09-24 11:43 (10.100.100.56)
+huawei   pts/10       2021-09-26 10:53 (10.100.100.54)
+huawei   pts/8        2021-09-24 09:45 (10.100.100.56)
+huawei   pts/11       2021-09-26 13:16 (10.100.100.54)
+[huawei@n148 playground]$ cat testfile 
+Sun Sep 26 15:16:27 CST 2021
+huawei   pts/2        2021-09-18 14:29 (10.100.100.53)
+huawei   :0           2021-09-15 15:52 (:0)
+huawei   pts/3        2021-09-15 15:53 (:0)
+huawei   pts/1        2021-09-18 11:51 (10.100.100.53)
+huawei   pts/7        2021-09-24 11:43 (10.100.100.56)
+huawei   pts/10       2021-09-26 10:53 (10.100.100.54)
+huawei   pts/8        2021-09-24 09:45 (10.100.100.56)
+huawei   pts/11       2021-09-26 13:16 (10.100.100.54)
+```
+# 信号
+## 捕获信号 trap
+# 后台运行
+## 终端断开就停止
+在末尾加上&即可，每次启动新作业时，Linux系统都会为其分配一个新的作业号和PID。通过ps命令，可以看到所有脚本处于运行状态。
+
+```
+[huawei@n148 playground]$ sh t.sh &
+```
+最好是将后台运行的脚本的STDOUT和STDERR进行重定向，避免与前台的输出混在一起，并且此种方式在终端断开后进程也就都退出了
+## 终端断开也运行 nohup
+```
+nohup sh shell.sh &
+查看日志：tail -f nohup.out
+```
+其实还可以tmux
+# 作业控制
+## 查看作业 jobs
+```
+#!/bin/bash 
+# Test job control 
+echo "Script Process ID: $$" 
+count=1 
+while [ $count -le 10 ] 
+do 
+ echo "Loop #$count" 
+ sleep 2 
+ count=$[ $count + 1 ] 
+done 
+echo "End of script..." 
+
+```
+参数-l可以显示出进程号，+代表默认（当前），-代表下一个
+```
+[huawei@n148 playground]$ jobs -l
+[2]  81375 Stopped                 sh t.sh
+[3]- 83412 Stopped                 sh t.sh
+[4]+ 85642 Stopped                 sh t.sh
+```
+## 重启作业到后台 bg
+## 重启作业到前台 fg
+## 优先级 nice
+## 优先级 renice
+## at、atq、atrm
+# 函数
+## 简单使用
+```
+function func1 { 
+ echo "This is an example of a function" 
+} 
+count=1 
+while [ $count -le 5 ] 
+do 
+ func1 
+ count=$[ $count + 1 ] 
+done 
+echo "This is the end of the loop" 
+func1 
+echo "Now this is the end of the script" 
+```
+## 返回值 $?
+可以使用默认返回值，但不是最好的方案
+```
+func1() { 
+ echo "trying to display a non-existent file" 
+ ls -l badfile 
+} 
+echo "testing the function: " 
+func1 
+echo "The exit status is: $?"
+
+[huawei@n148 playground]$ t.sh 
+testing the function: 
+trying to display a non-existent file
+ls: cannot access badfile: No such file or directory
+The exit status is: 2
+```
+使用return返回计算结果，但限制得是0~255，这个也不好
+```
+function dbl { 
+ read -p "Enter a value: " value 
+ echo "doubling the value" 
+ return $[ $value * 2 ] 
+} 
+dbl 
+echo "The new value is $?" 
+```
+最佳方案，用echo返回给调用方，可以返回浮点值和字符串值
+```
+function dbl { 
+ read -p "Enter a value: " value 
+ echo $[ $value * 2 ] 
+} 
+result=$(dbl) 
+echo "The new value is $result" 
+```
+## 传递参数
+实参是代码中的案例
+```
+function addem { 
+ if [ $# -eq 0 ] || [ $# -gt 2 ] 
+ then 
+ echo -1 
+ elif [ $# -eq 1 ] 
+ then 
+ echo $[ $1 + $1 ] 
+ else 
+ echo $[ $1 + $2 ] 
+ fi
+} 
+echo -n "Adding 10 and 15: " 
+value=$(addem 10 15) 
+echo $value 
+echo -n "Let's try adding just one number: " 
+value=$(addem 10) 
+echo $value 
+echo -n "Now trying adding no numbers: " 
+value=$(addem) 
+echo $value 
+echo -n "Finally, try adding three numbers: " 
+value=$(addem 10 15 20) 
+echo $value 
+
+[huawei@n148 playground]$ t.sh
+Adding 10 and 15: 25
+Let's try adding just one number: 20
+Now trying adding no numbers: -1
+Finally, try adding three numbers: -1
+```
+实参是外部敲进去的案例
+```
+function func7 { 
+ echo $[ $1 * $2 ] 
+} 
+if [ $# -eq 2 ] 
+then 
+ value=$(func7 $1 $2)  # 注意此处要手动再次传递进去，否则出错
+ echo "The result is $value" 
+else 
+ echo "Usage: badtest1 a b" 
+fi 
+
+[huawei@n148 playground]$ t.sh 10 1112
+The result is 11120
+```
+## 函数内局部变量 local
+```
+function func1 { 
+ local temp=$[ $value + 5 ] 
+ result=$[ $temp * 2 ] 
+} 
+temp=4 
+value=6 
+func1 
+echo "The result is $result" 
+if [ $temp -gt $value ] 
+then 
+ echo "temp is larger" 
+else 
+ echo "temp is smaller" 
+fi 
+
+[huawei@n148 playground]$ t.sh
+The result is 22
+temp is smaller
+```
+## 向函数传数组参数
+## 从函数返回数组
+## 递归
+```
+function factorial { 
+ if [ $1 -eq 1 ] 
+ then 
+ echo 1 
+ else 
+ local temp=$[ $1 - 1 ] 
+ local result=$(factorial $temp) 
+ echo $[ $result * $1 ] 
+ fi 
+} 
+read -p "Enter value: " value 
+result=$(factorial $value) 
+echo "The factorial of $value is: $result" 
+
+[huawei@n148 playground]$ t.sh
+Enter value: 5
+The factorial of 5 is: 120
+```
+## 库函数
+类似include的效果，使用source进行导入
+```
+库文件
+[huawei@n148 playground]$ cat func
+function addem { 
+ echo $[ $1 + $2 ] 
+} 
+function multem { 
+ echo $[ $1 * $2 ] 
+} 
+function divem { 
+ if [ $2 -ne 0 ] 
+ then 
+ echo $[ $1 / $2 ] 
+ else 
+ echo -1 
+ fi 
+}
+
+脚本文件
+[huawei@n148 playground]$ cat t.sh
+. ./func	导入时候确保路径正确无误
+value1=10 
+value2=5 
+result1=$(addem $value1 $value2) 
+result2=$(multem $value1 $value2) 
+result3=$(divem $value1 $value2) 
+echo "The result of adding them is: $result1" 
+echo "The result of multiplying them is: $result2" 
+echo "The result of dividing them is: $result3" 
+
+调用成功
+[huawei@n148 playground]$ t.sh
+The result of adding them is: 15
+The result of multiplying them is: 50
+The result of dividing them is: 2
 ```
