@@ -52,7 +52,7 @@ read pass2</dev/tty
 stty echo
 printf "1:%s\n2:%s\n" $pass $pass2
 ```
-## 添加、删除、修改用户
+## useradd、userdel 添加、删除用户
 
 ```
 创建
@@ -69,7 +69,7 @@ drwxr-xr-x.  3 root       root         23 Jul 16  2020 work
 [huawei@n148 ~]$ sudo userdel -r test
 
 ```
-## 创建多用户
+## 创建多用户脚本
 ```
 input="users.csv" 
 touch $input
@@ -92,12 +92,13 @@ do
  sudo userdel -r "$userid"
 done < "$input" 
 ```
-usermod 修改用户账户的字段，还可以指定主要组以及附加组的所属关系
-passwd 修改已有用户的密码
-chpasswd 从文件中读取登录名密码对，并更新密码
-chage 修改密码的过期日期
-chfn 修改用户账户的备注信息
-chsh 修改用户账户的默认登录shell 
+## 修改用户信息
+* usermod 修改用户账户的字段，还可以指* 定主要组以及附加组的所属关系  
+* passwd 修改已有用户的密码  
+* chpasswd 从文件中读取登录名密码对，并* 更新密码  
+* chage 修改密码的过期日期  
+* chfn 修改用户账户的备注信息  
+* chsh 修改用户账户的默认登录shell   
 
 以上详见Linux命令行与shell脚本编程大全.第3版7.1.5
 
@@ -123,7 +124,7 @@ $HOME/.bashrc该文件通常通过其他文件运行
 
 可以把自己的alias设置放在$HOME/.bashrc启动文件中，使其效果永久化
 
-## 打印环境变量
+## env、printenv、set 打印环境变量
 ```
 [huawei@10 bin]$ env
 [huawei@10 bin]$ printenv
@@ -140,7 +141,7 @@ $HOME/.bashrc该文件通常通过其他文件运行
 命令env、printenv和set之间的差异很细微。set命令会显示出全局变量、局部变量以及用户定义变量。它还会按照字母顺序对结果进行排序。env和printenv命令同set命令的区别在于前两个命令不会对变量排序，也不会输出局部变量和用户定义变量。在这种情况下，env和printenv的输出是重复的。不过env命令有一个printenv没有的功能，这使得它要更有用一些。
 ## 所有环境变量
 Linux命令行与shell脚本编程大全.第3版 第111页
-## 定义与取消用户变量
+## unset 定义与取消用户变量
 
 ```
 [huawei@10 postdb]$ my_variable="I am Global now"
@@ -149,16 +150,10 @@ I am Global now
 [huawei@10 postdb]$ unset my_variable
 [huawei@10 postdb]$ echo $my_variable
 ```
-# 打印
-## 八进制打印每个字符 od
+## export 导出变量到父shell
 ```
-[huawei@10 bin]$ od -a -b nusers
-0000000   #   !  sp   /   b   i   n   /   s   h  sp   -  nl   w   h   o
-        043 041 040 057 142 151 156 057 163 150 040 055 012 167 150 157
-0000020   |   w   c  sp   -   l  nl
-        174 167 143 040 055 154 012
-0000027
-
+$ my_variable="I am Global now"
+$ export my_variable
 ```
 # Shell文件
 ## Sha-Bang(#!)
@@ -176,6 +171,64 @@ who|wc -l
 [huawei@10 bin]$ sh -x nusers
 ```
 * 可以在脚本文件中加入set -x即开启，set +x即关闭
+# 外部命令与内建命令
+
+## 外部命令
+也称为文件系统命令，是存在于 bash shell 之外的程序。它们并不是 shell 程序的一部分。外部命令程序通常位于/bin、/usr/bin、/sbin 或/usr/sbin 中。  
+ps 就是一个外部命令。可以使用 which 和 type 命令找到它。
+```
+[huawei@n148 playground]$ ll $(which ps)
+-rwxr-xr-x 1 root root 100112 Oct  1  2020 /usr/bin/ps
+[huawei@n148 playground]$ type ps
+ps is hashed (/usr/bin/ps)
+```
+当外部命令执行时，会创建出一个子进程。这种操作被称为衍生（forking）。外部命令 ps 很方便显示出它的父进程以及自己所对应的衍生子进程。观察下面ps-f的ppid即可找到父进程号
+```
+[huawei@n148 playground]$ ps -f
+UID         PID   PPID  C STIME TTY          TIME CMD
+huawei    69608  69599  0 09:03 pts/6    00:00:00 -bash
+huawei    69623  69608  0 11:08 pts/6    00:00:00 bash
+huawei    74347  69623  0 11:12 pts/6    00:00:00 sleep 3000
+huawei    86232  69623  0 11:24 pts/6    00:00:00 ps -f
+```
+当进程必须执行衍生操作时，它需要花费时间和精力来设置新子进程的环境。所以说，外部命令多少还是有代价的。父子进程可以通过信号进行通信
+## 内建命令
+和外部命令的区别在于内建命令不需要使用子进程来执行。它们已经和 shell 编译成了一体，作为 shell 工具的组成部分存在。不需要借助外部程序文件来运行
+```
+[huawei@n148 playground]$ type cd
+cd is a shell builtin
+[huawei@n148 playground]$ type exit
+exit is a shell builtin
+```
+因为既不需要通过衍生出子进程来执行，也不需要打开程序文件，内建命令的执行速度要更快，效率也更高。要注意，有些命令有多种实现。两种实现略有不同。要查看命令的不同实现，使用 type 命令的-a 选项。命令 type -a 显示出了每个命令的两种实现。注意，which 命令只显示出了外部命令文件。对于有多种实现的命令，如果想要使用其外部命令实现，直接指明对应的文件就可以了。例如，要使用外部命令 pwd，可以输入/bin/pwd
+```
+[huawei@n148 playground]$ type -a echo
+echo is a shell builtin
+echo is /usr/bin/echo
+[huawei@n148 playground]$ which echo
+/usr/bin/echo
+[huawei@n148 playground]$ type -a pwd
+pwd is a shell builtin
+pwd is /usr/bin/pwd
+[huawei@n148 playground]$ which pwd
+/usr/bin/pwd
+```
+# history 历史记录
+# 日期时间 date
+```
+[huawei@n148 ~]$ date +%F
+2021-10-11
+[huawei@n148 ~]$ date +%T
+11:48:22
+[huawei@n148 ~]$ DATE=`date +%F | sed 's/-//g'``date +%T | sed 's/://g'`
+[huawei@n148 ~]$ echo $DATE
+20211011114836
+[huawei@n148 ~]$ date +%Y%m%d%H%M%S
+20211011115018
+[huawei@n148 ~]$ echo ./reslog-"`date +%F_%T`".txt
+./reslog-2021-10-11_11:52:44.txt
+
+```
 # 目录处理
 ## 创建多层
 ```
@@ -194,15 +247,14 @@ Linux命令行与shell脚本编程大全.第3版 7.2
 $ cp -R Scripts/ Mod_Scripts
 ```
 ## 创建
+几种方法
 ```
-[huawei@10 bin]$ touch 1
+[huawei@10 bin]$ touch f1 f2 f3
 [huawei@10 bin]$ >2
-[huawei@10 bin]$ ll
-total 12
--rw-rw-r--. 1 huawei huawei   0 Aug 30 13:20 1
--rw-rw-r--. 1 huawei huawei   0 Aug 30 13:21 2
+[huawei@n148 ~]$ echo "hello, world" > regular_file
 ```
 ## 文件信息
+确定文件或目录等的文件类型
 ```
 $ file my_file 
 ```
@@ -216,7 +268,7 @@ ll is aliased to `ls -l --color=auto'
 [huawei@10 postdb]$ type date
 date is /usr/bin/date
 ```
-## 文件别名
+# alias 别名
 ```
 [huawei@10 postdb]$ alias
 alias egrep='egrep --color=auto'
@@ -232,152 +284,7 @@ alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-ti
 创建别名
 $ alias li='ls -li' 
 ```
-## 文件内容
-cat，more，less，tail，head
-# 文本处理
 
-## 文件内容转换 tr
-转换大小写、删除指定字符、去重等等
-## 按列裁剪内容 cut
-https://blog.csdn.net/yangshangwei/article/details/52563123
-按空格切
-```
-[huawei@10 bin]$ cat data
-#nam age sex
-zhang 18 f
-li 20 m
-liu 80 f
-zhao 33 m
-wang 29 m
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data
-sex
-f
-m
-f
-m
-m
-[huawei@10 bin]$
-```
-按冒号裁剪字段1和5
-```
-[huawei@10 bin]$ cut -d: -f 1,5 /etc/passwd
-root:root
-bin:bin
-daemon:daemon
-adm:adm
-lp:lp
-sync:sync
-```
-裁剪字段6
-```
-[huawei@10 bin]$ cut -d: -f 6 /etc/passwd
-/root
-/bin
-/sbin
-/var/adm
-/var/spool/lpd
-/sbin
-```
-裁剪前10列
-```
-
-[huawei@10 bin]$ ll|cut -c 1-10
-total 12
--rw-rw-r--
--rwxrwxr-x
--rwxrwxr-x
-```
-## 排序sort
-```
-按数字反序
-[huawei@10 postdb]$  du -sh *|sort -nr
-560K    configure
-432K    config.log
-252K    config
-112M    tmp_install
-98M     thirdparty
-84K     configure.in
-79M     dest
-64K     INSTALL
-40K     config.status
-12M     doc
-12M     contrib
-8.0K    GNUmakefile.in
-8.0K    GNUmakefile
-4.0K    README
-4.0K    Makefile
-4.0K    HISTORY
-4.0K    corebuild.sh
-4.0K    COPYRIGHT
-4.0K    configure_release.sh
-4.0K    configure_debug.sh
-4.0K    build_release.sh
-4.0K    build_debug.sh
-1.3G    src
-
-基于第三列排序
-$ sort -t ':' -k 3 -n /etc/passwd 
-root:x:0:0:root:/root:/bin/bash 
-bin:x:1:1:bin:/bin:/sbin/nologin 
-daemon:x:2:2:daemon:/sbin:/sbin/nologin 
-adm:x:3:4:adm:/var/adm:/sbin/nologin 
-lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin 
-sync:x:5:0:sync:/sbin:/bin/sync 
-shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown 
-halt:x:7:0:halt:/sbin:/sbin/halt 
-mail:x:8:12:mail:/var/spool/mail:/sbin/nologin 
-news:x:9:13:news:/etc/news: 
-uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin 
-operator:x:11:0:operator:/root:/sbin/nologin 
-```
-## 去重uniq
-输入得是sort后的数据
-```
-[huawei@10 bin]$ cat data
-#nam age sex
-zhang 18 f
-li 20 m
-liu 80 f
-zhao 33 m
-wang 29 m
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data
-sex
-f
-m
-f
-m
-m
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -c
-      2 f
-      3 m
-      1 sex
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq
-f
-m
-sex
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -d
-f
-m
-[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -u
-sex
-
-```
-## 排版fmt
-可以执行每行总列数，并不会切割单词
-```
-[huawei@10 bin]$ cat ./data|fmt -w 20
-#nam age sex zhang
-18 f li 20 m liu
-80 f zhao 33 m wang
-29 m
-[huawei@10 bin]$ cat ./data|fmt
-#nam age sex zhang 18 f li 20 m liu 80 f zhao 33 m wang 29 m
-```
-## 统计行数-l、字数-w、字节数-c
-```
-[huawei@10 bin]$ cat data |wc
-      6      18      61
-```
 # 链接文件
 ## 软链接
 
@@ -411,7 +318,7 @@ lrwxrwxrwx. 1 huawei huawei   4 Aug 30 13:29 sdata -> data
 
 ## 分区
 
-fdisk
+fdisk、fsck 
 
 Linux命令行与shell脚本编程大全.第3版 第八章
 
@@ -486,13 +393,152 @@ huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
 ```
 # SED
 # AWK
-# wc
-## 统计行数
+# cat，more，less，tail，head 查看文件内容
+# wc 统计行数-l、字数-w、字节数-c
 ```
+[huawei@10 bin]$ cat data |wc
+      6      18      61
 [huawei@n148 playground]$ who | wc -l
 ```
-# tr
-#seq
+# tr 转换大小写、删除指定字符、去重等等
+
+# sort 排序
+```
+按数字反序
+[huawei@10 postdb]$  du -sh *|sort -nr
+560K    configure
+432K    config.log
+252K    config
+112M    tmp_install
+98M     thirdparty
+84K     configure.in
+79M     dest
+64K     INSTALL
+40K     config.status
+12M     doc
+12M     contrib
+8.0K    GNUmakefile.in
+8.0K    GNUmakefile
+4.0K    README
+4.0K    Makefile
+4.0K    HISTORY
+4.0K    corebuild.sh
+4.0K    COPYRIGHT
+4.0K    configure_release.sh
+4.0K    configure_debug.sh
+4.0K    build_release.sh
+4.0K    build_debug.sh
+1.3G    src
+
+基于第三列排序
+$ sort -t ':' -k 3 -n /etc/passwd 
+root:x:0:0:root:/root:/bin/bash 
+bin:x:1:1:bin:/bin:/sbin/nologin 
+daemon:x:2:2:daemon:/sbin:/sbin/nologin 
+adm:x:3:4:adm:/var/adm:/sbin/nologin 
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin 
+sync:x:5:0:sync:/sbin:/bin/sync 
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown 
+halt:x:7:0:halt:/sbin:/sbin/halt 
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin 
+news:x:9:13:news:/etc/news: 
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin 
+operator:x:11:0:operator:/root:/sbin/nologin 
+```
+# uniq 去重
+输入得是sort后的数据
+```
+[huawei@10 bin]$ cat data
+#nam age sex
+zhang 18 f
+li 20 m
+liu 80 f
+zhao 33 m
+wang 29 m
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data
+sex
+f
+m
+f
+m
+m
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -c
+      2 f
+      3 m
+      1 sex
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq
+f
+m
+sex
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -d
+f
+m
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data | sort|uniq -u
+sex
+
+```
+# cut 按列裁剪内容 
+https://blog.csdn.net/yangshangwei/article/details/52563123
+按空格切
+```
+[huawei@10 bin]$ cat data
+#nam age sex
+zhang 18 f
+li 20 m
+liu 80 f
+zhao 33 m
+wang 29 m
+[huawei@10 bin]$ cut -d ' ' -f 3 ./data
+sex
+f
+m
+f
+m
+m
+[huawei@10 bin]$
+```
+按冒号裁剪字段1和5
+```
+[huawei@10 bin]$ cut -d: -f 1,5 /etc/passwd
+root:root
+bin:bin
+daemon:daemon
+adm:adm
+lp:lp
+sync:sync
+```
+裁剪字段6
+```
+[huawei@10 bin]$ cut -d: -f 6 /etc/passwd
+/root
+/bin
+/sbin
+/var/adm
+/var/spool/lpd
+/sbin
+```
+裁剪前10列
+```
+
+[huawei@10 bin]$ ll|cut -c 1-10
+total 12
+-rw-rw-r--
+-rwxrwxr-x
+-rwxrwxr-x
+```
+# fmt 排版
+可以执行每行总列数，并不会切割单词
+```
+[huawei@10 bin]$ cat ./data|fmt -w 20
+#nam age sex zhang
+18 f li 20 m liu
+80 f zhao 33 m wang
+29 m
+[huawei@10 bin]$ cat ./data|fmt
+#nam age sex zhang 18 f li 20 m liu 80 f zhao 33 m wang 29 m
+```
+
+# seq 生成序列、join效果
 ```
 [huawei@n148 playground]$ seq 5
 1
@@ -532,8 +578,8 @@ huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
 ---00000017---
 ---00000018---
 ```
-# 压缩与归档
-https://www.cnblogs.com/h2zZhou/p/10425590.html  
+R
+# tar 压缩与归档
 下面案例演示按日期创建子目录，然后读取配置并将其内所有文件归档
 ```
 
@@ -594,7 +640,16 @@ exit
 ## echo
 
 ## printf
+## od 八进制打印每个字符
+```
+[huawei@10 bin]$ od -a -b nusers
+0000000   #   !  sp   /   b   i   n   /   s   h  sp   -  nl   w   h   o
+        043 041 040 057 142 151 156 057 163 150 040 055 012 167 150 157
+0000020   |   w   c  sp   -   l  nl
+        174 167 143 040 055 154 012
+0000027
 
+```
 # 命令替换
 
 shell脚本中最有用的特性之一就是可以从命令输出中提取信息，并将其赋给变量，两种方式如下
@@ -633,16 +688,17 @@ done
 ```
 ## 标准输出STDOUT
 STDOUT文件描述符代表shell的标准输出
-## STDOUT输出到文件 ">" & ">>"
+## STDOUT重定向到文件 ">" & ">>"
 将>后面的文件作为程序的输出目标，">"会覆写文件，">>"是追加模式
 ```
 $ ls -l > test2
 $ ls -l >> test2
 ```
+还可以多个cat的内容
 ## 标准错误STDERR
 默认情况下，STDERR文件描述符会和STDOUT文件描述符指向同样的地方（尽管分配给它们
 的文件描述符值不同）。但STDERR并不会随着STDOUT的重定向而发生改变
-## STDERR输出到文件
+## STDERR重定向到文件 "2>"
 只重定向错误，此时错误输出到了指定文件里，stdout还是显示器
 ```
 [huawei@n148 playground]$ ls -al test badtest test2 2> test5 
@@ -651,21 +707,7 @@ $ ls -l >> test2
 ls: cannot access badtest: No such file or directory
 ls: cannot access test2: No such file or directory
 ```
-重定向STDOUT与STDERR，可以用这种方法将脚本的正常输出和脚本生成的错误消息分离开来。这样就可以轻松地识别出错误信息，再不用在成千上万行正常输出数据中翻腾了
-```
-[huawei@n148 playground]$ ls -al test badtest test2 2> test5 1>test6
-[huawei@n148 playground]$ less test6
--rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
-```
-也可以将STDOUT与STDERR放一起
-```
-[huawei@n148 playground]$ ls -al test badtest test2 &> test8
-[huawei@n148 playground]$ cat test8
-ls: cannot access badtest: No such file or directory
-ls: cannot access test2: No such file or directory
--rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
-```
-## 重定向脚本的STDERR
+## 重定向脚本的STDERR "2>”
 将脚本中所有输出到STDERR的内容输出到文件里
 ```
 $ cat test8 
@@ -676,10 +718,77 @@ echo "This is normal output"
 
 $ ./test8 2> test9 
 ```
+## STDOUT与STDERR各自重定向 "1>" & "2>"
+可以用这种方法将脚本的正常输出和脚本生成的错误消息分离开来。这样就可以轻松地识别出错误信息，再不用在成千上万行正常输出数据中翻腾了
+```
+[huawei@n148 playground]$ ls -al test badtest test2 2> test5 1>test6
+[huawei@n148 playground]$ less test6
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+```
+## STDOUT与STDERR重定向到一起 "&>"
+```
+[huawei@n148 playground]$ ls -al test badtest test2 &> test8
+[huawei@n148 playground]$ cat test8
+ls: cannot access badtest: No such file or directory
+ls: cannot access test2: No such file or directory
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+```
+效果同上，上面的是简写方式
+```
+[huawei@n148 playground]$ ls -al test badtest test2 > file 2>&1
+[huawei@n148 playground]$ cat file
+ls: cannot access badtest: No such file or directory
+ls: cannot access test2: No such file or directory
+-rw-rw-r-- 1 huawei huawei 0 Sep 26 11:21 test
+```
+
 ## 使用exec进行重定向
 Linux命令行与shell脚本编程大全.第3版 15.2.2
+## 重定向done ">" & "|"
+done输出到文件
+```
+for file in /home/huawei/*
+do 
+ if [ -d "$file" ] 
+ then
+  echo "$file is a directory"
+ else
+  echo "$file is a file"
+ fi 
+done > output.txt
+```
+```
+for (( a = 1; a < 10; a++ )) 
+do 
+ echo "The number is $a" 
+done > test23.txt 
+echo "The command is finished." 
+```
+重定向输出到命令
+```
+for state in "North Dakota" Connecticut Illinois Alabama Tennessee 
+do 
+ echo "$state is the next place to go" 
+done | sort 
+echo "This completes our travels" 
+```
 # 管道
-
+## 无名管道
+```
+[huawei@n148 ~]$ ps -ef | grep postdb
+huawei    27545  27462 99 11:05 pts/0    00:01:48 postdb -D /home/huawei/hwwork/postdb/src/test/regress/./tmp_check/data -F -c listen_addresses= -k /tmp/pg_regress-assAwh
+huawei    28309 127651  0 11:06 pts/3    00:00:00 grep --color=auto postdb
+huawei   130061      1 16 10:39 ?        00:04:27 /home/huawei/hwwork/postdb/dest/bin/postdb
+```
+## 命名管道
+实际上是一个文件，会阻塞，a写进后如果b不读取出则a会阻塞，b读取但a没写入则b也会阻塞，见下例
+```
+$ mkfifo fifo_test    #通过mkfifo命令创建一个有名管道
+$ echo "fewfefe" > fifo_test
+#试图往fifo_test文件中写入内容，但是被阻塞，要另开一个终端继续下面的操作
+$ cat fifo_test        #另开一个终端，记得，另开一个。试图读出fifo_test的内容
+fewfefe
+```
 # 数学运算
 
 ## expr
@@ -717,39 +826,16 @@ var3=$[$var1 + $var2]
 echo The answer is $var3 
 exit 5 
 ```
-# bool运算
-## true与false
-非逻辑值，不要认为是1和0，都是内置命令
+# 字符串
+## 长度
 ```
-$ if true;then echo "YES"; else echo "NO"; fi
-YES
-
-$ help true false
-true: true
-     Return a successful result.
-false: false
-     Return an unsuccessful result.
-$ type true false
-true is a shell builtin
-false is a shell builtin
-```
-false返回的是1，true返回的是0，这就是main返回0作为成功的原因。。。
-```
-$ true
-$ echo $?
-0
-$ false
-$ echo $?
-1
-```
-## 与&& 或|| 非!
-```
-$ if true && true;then echo "YES"; else echo "NO"; fi
-YES
-$ if true || true;then echo "YES"; else echo "NO"; fi
-YES
-$ if ! false;then echo "YES"; else echo "NO"; fi
-YES
+#!/bin/bash 
+var="get the length of me"
+echo ${var}     # 这里等同于$var
+echo ${#var}
+expr length "$var"
+echo $var | awk '{printf("%d\n", length($0));}'
+echo -n $var |  wc -c
 ```
 # if
 
@@ -815,16 +901,70 @@ jessica)
  echo "Sorry, you are not allowed here";; 
 esac 
 ```
+## true与false
+非逻辑值，不要认为是1和0，都是内置命令
+```
+$ if true;then echo "YES"; else echo "NO"; fi
+YES
+
+$ help true false
+true: true
+     Return a successful result.
+false: false
+     Return an unsuccessful result.
+$ type true false
+true is a shell builtin
+false is a shell builtin
+```
+false返回的是1，true返回的是0，这就是main返回0作为成功的原因。。。
+```
+$ true
+$ echo $?
+0
+$ false
+$ echo $?
+1
+```
+## 与&& 或|| 非!
+```
+$ if true && true;then echo "YES"; else echo "NO"; fi
+YES
+$ if true || true;then echo "YES"; else echo "NO"; fi
+YES
+$ if ! false;then echo "YES"; else echo "NO"; fi
+YES
+
+如果ping通www.lzu.edu.cn，那么打印连通信息
+$ ping -c 1 www.lzu.edu.cn -W 1 && echo "=======connected======="
+```
+判断字符串是否为空
+```
+var3="  "
+if [ ! $var3 ] 
+then 
+ echo "The string '$var3' is empty" 
+else 
+ echo "The string '$var3' is not empty" 
+fi
+```
+判断变量是否定义来给默认值
+```
+[huawei@n148 playground]$ [ ! "$a1" ] && a1='aaa'
+[huawei@n148 playground]$ echo $a1
+aaa
+[huawei@n148 playground]$ [ "$a2" ] || a2='bbb'
+[huawei@n148 playground]$ echo $a2
+bbb
+
+```
 
 ## 整数比较 整数比较 整数比较
-
-- n1 -eq n2 检查n1是否与n2相等
-  n1 -ge n2 检查n1是否大于或等于n2
-  n1 -gt n2 检查n1是否大于n2
-  n1 -le n2 检查n1是否小于或等于n2
-  n1 -lt n2 检查n1是否小于n2
-  n1 -ne n2 检查n1是否不等于n2
-
+* n1 -eq n2 检查n1是否与n2相等
+* n1 -ge n2 检查n1是否大于或等于n2
+* n1 -gt n2 检查n1是否大于n2
+* n1 -le n2 检查n1是否小于或等于n2
+* n1 -lt n2 检查n1是否小于n2
+* n1 -ne n2 检查n1是否不等于n2
 ```
 value1=10 
 value2=11 
@@ -843,13 +983,17 @@ fi
 ```
 
 ## 字符串比较
-
-str1 = str2 检查str1是否和str2相同
-str1 != str2 检查str1是否和str2不同
-str1 < str2 检查str1是否比str2小
-str1 > str2 检查str1是否比str2大
--n str1 检查str1的长度是否非0 
--z str1 检查str1的长度是否为0
+字符串变量要使用引号"$var"，避免变量为空语法失败，另外【】的左右都要有空格。如
+```
+$ if [ "$str" = "test" ]; then echo "YES"; else echo "NO"; fi
+NO
+```
+* str1 = str2 检查str1是否和str2相同
+* str1 != str2 检查str1是否和str2不同
+* str1 < str2 检查str1是否比str2小
+* str1 > str2 检查str1是否比str2大
+* -n str1 检查str1的长度是否非0 
+* -z str1 检查str1的长度是否为0
 
 ```
 testuser=huawei
@@ -899,7 +1043,7 @@ Linux命令行与shell脚本编程大全.第3版 第12章
 
 检查目录、检查对象是否存在、检查文件、检查是否可读可写可执行、是否空文件、文件主人和组，日期时间等
 
-## ((   ))
+## 数学赋值 ((   ))
 
 用于任意的数学赋值或比较表达式
 
@@ -913,7 +1057,7 @@ then
 fi
 ```
 
-## [[   ]]
+## 字符串正则比较[[   ]]
 
 字符串比较，可以定义一个正则表达式
 
@@ -1121,37 +1265,6 @@ Inside the loop: 50
 25
 Inside the loop: 25
 0
-```
-# 循环输出done重定向
-## 重定向输出到文件
-```
-for file in /home/huawei/*
-do 
- if [ -d "$file" ] 
- then
-  echo "$file is a directory"
- else
-  echo "$file is a file"
- fi 
-done > output.txt
-```
-```
-for (( a = 1; a < 10; a++ )) 
-do 
- echo "The number is $a" 
-done > test23.txt 
-echo "The command is finished." 
-```
-## 重定向输出到命令
-```
-for state in "North Dakota" Connecticut Illinois Alabama Tennessee 
-do 
- echo "$state is the next place to go" 
-done | sort 
-echo "This completes our travels" 
-```
-## 重定向输入
-```
 ```
 # break
 ## 退出for
@@ -1487,7 +1600,7 @@ echo "Finished processing the file"
 [huawei@n148 playground]$ less testfile
 ```
 ## dev/tty
-
+## dev/zero
 # 临时文件/tmp
 ## mktemp
 创建临时文件，-t则会创建在/tmp中，-d则是创建目录
@@ -1551,6 +1664,33 @@ huawei   pts/10       2021-09-26 10:53 (10.100.100.54)
 huawei   pts/8        2021-09-24 09:45 (10.100.100.56)
 huawei   pts/11       2021-09-26 13:16 (10.100.100.54)
 ```
+# 进程
+## 查看进程id
+```
+[huawei@n148 ~]$ pidof node
+105163 86437 86315 86304 86235 86191
+```
+## 查看进程的内存映像
+使用pidof获取进程号后可以如下（一切皆文件。。。）
+```
+[huawei@n148 130061]$ cat /proc/130061/maps
+00400000-00e53000 r-xp 00000000 fd:02 169222059                          /home/huawei/hwwork/postdb/dest/bin/postdb
+01052000-01053000 r--p 00a52000 fd:02 169222059                          /home/huawei/hwwork/postdb/dest/bin/postdb
+01053000-01064000 rw-p 00a53000 fd:02 169222059                          /home/huawei/hwwork/postdb/dest/bin/postdb
+01064000-01067000 rw-p 00000000 00:00 0
+01e0b000-01ebb000 rw-p 00000000 00:00 0                                 
+```
+## 获取优先级，调整优先级renice
+```
+[huawei@n148 ~]$  ps -e -o "%p %c %n" | grep postdb
+ 13520 postdb            0
+130061 postdb            0
+[huawei@n148 ~]$ renice 1 -p 18052
+18052 (process ID) old priority 0, new priority 1
+[huawei@n148 ~]$  ps -e -o "%p %c %n" | grep postdb
+ 18052 postdb            1
+130061 postdb            0
+```
 # 信号
 ## 捕获信号 trap
 # 后台运行
@@ -1567,6 +1707,7 @@ nohup sh shell.sh &
 查看日志：tail -f nohup.out
 ```
 其实还可以tmux
+## coproc 协程
 # 作业控制
 ## 查看作业 jobs
 ```
@@ -1592,8 +1733,7 @@ echo "End of script..."
 ```
 ## 重启作业到后台 bg
 ## 重启作业到前台 fg
-## 优先级 nice
-## 优先级 renice
+
 ## at、atq、atrm
 # 函数
 ## 简单使用
