@@ -393,6 +393,325 @@ huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
 ```
 # SED
 # AWK
+规则是先模式匹配后执行动作。pattern { action }
+## 内建变量
+变量 	意义 	默认值
+* ARGC 命令行参数的个数 -
+* ARGV 命令行参数数组 -
+* FILENAME 当前输入文件名 -
+* FNR 当前输入文件的记录个数 -
+* FS 控制着输入行的字段分割符 " "
+* NF 当前记录的字段个数 -
+* NR 到目前为止读的记录数量 -
+* OFMT 数值的输出格式 "%.6g"
+* OFS 输出字段分割符 " "
+* ORS 输出的记录的分割符 "\n"
+* RLENGTH 被函数 match 匹配的字符串的长度 -
+* RS 控制着输入行的记录分割符 "\n"
+* RSTART 被函数 match 匹配的字符串的开始
+* SUBSEP 下标分割符 "\034"
+## 内建算术函数
+函数 返回值
+* atan2(y,x) y/x 的反正切值, 定义域在 −π 到 π 之间
+* cos(x) x 的余弦值, x 以弧度为单位
+* exp(x) x 的指数函数, e^x
+* int(x) x 的整数部分; 当 x 大于 0 时, 向 0 取整
+* log(x) x 的自然对数 (以 e 为底)
+* rand() 返回一个随机数 r, 0 ≤ r < 1
+* sin(x) x 的正弦值, x 以弧度为单位.
+* sqrt(x) x 的方根
+* srand(x) x 是 rand() 的新的随机数种子
+## 内建字符串函数
+函数 描述
+* gsub(r,s) 将 $0 中所有出现的 r 替换为 s, 返回替换发生的次数.
+* gsub(r,s,t ) 将字符串 t 中所有出现的 r 替换为 s, 返回替换发生的次数
+* index(s,t) 返回字符串 t 在 s 中第一次出现的位置, 如果 t 没有出现的话, 返回 0.
+* length(s) 返回 s 包含的字符个数
+* match(s,r) 测试 s 是否包含能被 r 匹配的子串, 返回子串的起始位置或 0; 设置 RSTART 与 RLENGTH
+* split(s,a) 用 FS 将 s 分割到数组 a 中, 返回字段的个数
+* split(s,a,fs) 用 fs 分割 s 到数组 a 中, 返回字段的个数
+* sprintf(fmt,expr-list) 根据格式字符串 fmt 返回格式化后的 expr-list
+* sub(r,s) 将 $0 的最左最长的, 能被 r 匹配的子字符串替换为 s, 返回替换发生的次数.
+* sub(r,s,t) 把 t 的最左最长的, 能被 r 匹配的子字符串替换为 s, 返回替换发生的次数.
+* substr(s,p) 返回 s 中从位置 p 开始的后缀.
+* substr(s,p,n) 返回 s 中从位置 p 开始的, 长度为 n 的子字符串.
+
+## 打印所有内容 $0
+$0代表整行
+```
+[huawei@n148 playground]$ cat emp.data
+Beth 4.00 0
+Dan 3.75 0
+Kathy 4.00 10
+Mark 5.00 20
+Mary 5.50 22
+Susie 4.25 18
+
+[huawei@n148 playground]$ awk '{print}' emp.data
+[huawei@n148 playground]$ awk '{print $0}' emp.data
+```
+## 打印指定列 $1
+$1~$n代表列，默认输出是空格间隔，可以单独去设置
+```
+[huawei@n148 playground]$ awk '{print $2,$1}' emp.data
+4.00 Beth
+3.75 Dan
+4.00 Kathy
+```
+## 当前行的列数 NF
+下面的$NF就是$3，因为只有3列
+```
+[huawei@n148 playground]$ awk '{print NF, $1, $NF}' emp.data
+3 Beth 0
+3 Dan 0
+```
+## 打印计算结果
+```
+[huawei@n148 playground]$ awk '{print $1, $2*$3}' emp.data
+```
+## 打印行号 NR
+```
+[huawei@n148 playground]$ awk '{print NR,$0}' emp.data
+1 Beth 4.00 0
+2 Dan 3.75 0
+```
+## 将文本放入输出中
+```
+[huawei@n148 playground]$ awk '{ print "total pay for", $1, "is", $2 * $3 }' emp.data
+total pay for Mark is 100
+total pay for Mary is 121
+total pay for Susie is 76.5
+```
+## 使用 printf
+printf需要知道值的具体类型才行，print则更像是泛型
+```
+[huawei@n148 playground]$ awk '{ printf("total pay for %s is $%.2f\n", $1, $2 * $3) }' emp.data
+total pay for Mark is $100.00
+total pay for Mary is $121.00
+total pay for Susie is $76.50
+
+[huawei@n148 playground]$ awk '{ printf("%-8s $%6.2f\n", $1, $2 * $3) }' emp.data
+Mark     $100.00
+Mary     $121.00
+Susie    $ 76.50
+```
+## 排序
+下面的排序局限在只能将key放到第一列
+```
+[huawei@n148 playground]$ awk '{ printf("%6.2f %s\n", $2 * $3, $0) }' emp.data | sort -n
+  0.00 Beth 4.00 0
+  0.00 Dan 3.75 0
+ 40.00 Kathy 4.00 10
+ 76.50 Susie 4.25 18
+100.00 Mark 5.00 20
+121.00 Mary 5.50 22
+```
+## 模式（条件判断）
+
+```
+[huawei@n148 playground]$ awk '$2>=5 {print}' emp.data
+Mark 5.00 20
+Mary 5.50 22
+[huawei@n148 playground]$ awk '$2*$3>=50 {print}' emp.data
+Mark 5.00 20
+Mary 5.50 22
+Susie 4.25 18
+[huawei@n148 playground]$ awk '$1=="Susie" {print}' emp.data
+Susie 4.25 18
+```
+## 页眉与页脚 BEGIN & END
+注意 print "" 打印一个空行, 它与一个单独的 print 并不相同, 后者打印当前行.
+```
+[#!/bin/bash 
+BEGIN {
+  printf("%10s %6s %5s %s", "COUNTRY", "AREA", "POP", "CONTINENT")
+  printf("\n\n")
+}
+{ 
+  printf("%10s %6d %5d %s\n", $1, $2, $3, $4)
+  area = area + $2
+  pop = pop + $3
+}
+END { printf("\n%10s %6d %5d\n", "TOTAL", area, pop) }
+
+[huawei@n148 playground]$ awk -f t.sh countries
+   COUNTRY   AREA   POP CONTINENT
+
+      USSR   8649   275 Asia
+    Canada   3852    25 North
+     China   3705  1032 Asia
+       USA   3615   237 North
+    Brazil   3286   134 South
+     India   1267   746 Asia
+    Mexico    762    78 North
+    France    211    55 Europe
+     Japan    144   120 Asia
+   Germany     96    61 Europe
+   England     94    56 Europe
+
+     TOTAL  25681  2819
+
+```
+## 计数
+if $3>15 则emp+1
+```
+[huawei@n148 playground]$ awk '$3>15 {emp=emp+1} END{print emp}' emp.data                                              3
+ ```
+## 求和与平均值
+前提是总数不为0
+```
+[huawei@n148 playground]$ awk '{pay=pay+$2*$3} END{printf("total:%.3f\naver:%.3f\n",pay,pay/NR)}' emp.data
+total:337.500
+aver:56.250
+```
+## 找最大
+max效果，只有当至少有一行的$2是正数时, 程序才是正确的
+```
+[huawei@n148 playground]$ awk '$2>maxrate{maxrate=$2;name=$1} END{printf("highest rate:%.3f\nname:%s\n",maxrate,name)}' emp.data
+highest rate:5.500
+name:Mary
+```
+## 连接字符串
+join效果
+```
+[huawei@n148 playground]$ awk '{names=names $1 " "} END{print names}' emp.data
+Beth Dan Kathy Mark Mary Susie
+```
+## 字符串length
+```
+[huawei@n148 playground]$ awk '{print $1, length($1)}' emp.data
+Beth 4
+Dan 3
+Kathy 5
+Mark 4
+```
+## 统计行数、词数、字符数
+与wc效果相同
+```
+[huawei@n148 playground]$ awk '{nc=nc+length($0)+1;nw=nw+NF} END{printf("%d lines,%d words,%d chars\n",NR,nw,nc)}' emp.data
+6 lines,18 words,77 chars
+```
+## if else
+```
+#!/bin/bash 
+$2>4 {n=n+1;pay=pay+$2*$3}
+END {
+  if (n>0)
+    print n, "emps, total:", pay, "ave:" pay/n
+  else
+    print "no emps than $6/hour"
+}
+
+
+[huawei@n148 playground]$ awk -f t.sh emp.data
+3 emps, total: 297.5 ave:99.1667
+```
+## while & for
+```
+#!/bin/bash 
+BEGIN{
+  i=1
+  while(i<=5){
+    printf("%d\n",i)
+    i=i+1
+  }
+}
+{
+  print
+}
+END{
+  for(a=1;a<5;a=a+1){
+    printf("%d\n",a)
+  }
+}
+
+[huawei@n148 playground]$ awk -f t.sh emp.data
+1
+2
+3
+4
+5
+Beth 4.00 0
+Dan 3.75 0
+Kathy 4.00 10
+Mark 5.00 20
+Mary 5.50 22
+Susie 4.25 18
+1
+2
+3
+4
+```
+## 一维数组
+向一个NR个元素的array依次赋值，然后循环输出，注意这里没使用[0]，是从1开始使用的
+```
+#!/bin/bash 
+{
+  line[NR]=$0
+}
+END{
+  for(a=NR;a>0;a=a-1){
+    print line[a]
+  }
+}
+
+[huawei@n148 playground]$ awk -f t.sh emp.data
+Susie 4.25 18
+Mary 5.50 22
+Mark 5.00 20
+Kathy 4.00 10
+Dan 3.75 0
+Beth 4.00 0
+```
+## 文件名常量 FILENAME、前N行 FNR
+打印前5行，且加上文件名
+```
+[huawei@n148 playground]$ awk 'FNR <= 5 { print FILENAME ": " $0 }' countries
+countries: USSR 8649 275 Asia
+countries: Canada 3852 25 North America
+countries: China 3705 1032 Asia
+countries: USA 3615 237 North America
+countries: Brazil 3286 134 South America
+```
+## 简单正则样式
+```
+[huawei@n148 playground]$ awk '/Asia/ { print }' countries
+USSR 8649 275 Asia
+China 3705 1032 Asia
+India 1267 746 Asia
+Japan 144 120 Asia
+[huawei@n148 playground]$
+```
+## 改变值
+使用逻辑比较，正则加gsub替换的两种方式
+```
+[huawei@n148 playground]$ awk  '$4 == "Asia" { $4 = "yazhou" } { print }' countries
+USSR 8649 275 yazhou
+Canada 3852 25 North America
+China 3705 1032 yazhou
+USA 3615 237 North America
+Brazil 3286 134 South America
+India 1267 746 yazhou
+Mexico 762 78 North America
+France 211 55 Europe
+Japan 144 120 yazhou
+Germany 96 61 Europe
+England 94 56 Europe
+
+[huawei@n148 playground]$ awk '{ gsub(/Asia/, "xxx"); print }' countries
+USSR 8649 275 xxx
+Canada 3852 25 North America
+China 3705 1032 xxx
+USA 3615 237 North America
+Brazil 3286 134 South America
+India 1267 746 xxx
+Mexico 762 78 North America
+France 211 55 Europe
+Japan 144 120 xxx
+Germany 96 61 Europe
+England 94 56 Europe
+
+```
 # cat，more，less，tail，head 查看文件内容
 # wc 统计行数-l、字数-w、字节数-c
 ```
@@ -578,7 +897,8 @@ total 12
 ---00000017---
 ---00000018---
 ```
-R
+# find 文件查找
+https://www.cnblogs.com/derek1184405959/p/11100469.html
 # tar 压缩与归档
 下面案例演示按日期创建子目录，然后读取配置并将其内所有文件归档
 ```
@@ -694,7 +1014,15 @@ STDOUT文件描述符代表shell的标准输出
 $ ls -l > test2
 $ ls -l >> test2
 ```
-还可以多个cat的内容
+## 多操作结果一次重定向到STDOUT "{...} >"
+猜测也可重定向stderr，为测试。。。
+```
+#!/bin/bash 
+{
+	cat testfile
+	cat testerror
+} > 1.txt
+```
 ## 标准错误STDERR
 默认情况下，STDERR文件描述符会和STDOUT文件描述符指向同样的地方（尽管分配给它们
 的文件描述符值不同）。但STDERR并不会随着STDOUT的重定向而发生改变
@@ -743,6 +1071,7 @@ ls: cannot access test2: No such file or directory
 ```
 
 ## 使用exec进行重定向
+作用类似文件句柄，
 Linux命令行与shell脚本编程大全.第3版 15.2.2
 ## 重定向done ">" & "|"
 done输出到文件
@@ -791,12 +1120,42 @@ fewfefe
 ```
 # 数学运算
 
-## expr
-
-## 方括号
-
-## 浮点计算bc
-
+## expr与shell的计算方式
+expr命令可以实现数值运算、数值或字符串比较、字符串匹配、字符串提取、字符串长度计算等功能。它还具有几个特殊功能，判断变量或参数是否为整数、是否为空、是否为0等。
+https://www.cnblogs.com/f-ck-need-u/p/7231832.html
+```
+#!/bin/bash 
+a=3
+b=4
+echo "expr:"
+echo `expr $a + $b`
+echo `expr $a - $b`
+echo `expr $a \* $b`
+echo `expr $a / $b`
+echo `expr $a % $b`
+echo "shell:"
+echo $(($a+$b))
+echo $(($a-$b))
+echo $(($a*$b))
+echo $(($a/$b))
+echo $(($a%$b))
+c=$(($a**$b))
+echo $((($c+$b)*$a))
+```
+## bc 浮点计算
+https://www.cnblogs.com/f-ck-need-u/p/7231870.html  
+scale是控制小数点位数
+```
+#!/bin/bash 
+a=3.1
+b=4.2
+echo "bc"
+echo "scale=5;$a+$b" |bc
+echo "scale=5;$a-$b" |bc
+echo "scale=5;$a*$b" |bc
+echo "scale=5;$a/$b"|bc
+echo "scale=5;$a%$b"|bc
+```
 # 退出
 
 ## $?
