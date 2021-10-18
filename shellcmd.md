@@ -365,32 +365,139 @@ tmpfs                    379M   44K  379M   1% /run/user/1000
 112M    tmp_install
 ```
 # GREP
+grep的全称为： Global search Regular Expression and Print out the line。全称中的”Global search”为全局搜索之意。全称中的”Regular Expression”表示正则表达式。
+–color=auto 或者 –color：表示对匹配到的文本着色显示
+
+-i：在搜索的时候忽略大小写
+
+-n：显示结果所在行号
+
+-c：统计匹配到的行数，注意，是匹配到的总行数，不是匹配到的次数
+
+-o：只显示符合条件的字符串，但是不整行显示，每个符合条件的字符串单独显示一行
+
+-v：输出不带关键字的行（反向查询，反向匹配）
+
+-w：匹配整个单词，如果是字符串中包含这个单词，则不作匹配
+
+-Ax：在输出的时候包含结果所在行之后的指定行数，这里指之后的x行，A：after
+
+-Bx：在输出的时候包含结果所在行之前的指定行数，这里指之前的x行，B：before
+
+-Cx：在输出的时候包含结果所在行之前和之后的指定行数，这里指之前和之后的x行，C：context
+
+-e：实现多个选项的匹配，逻辑or关系
+
+-q：静默模式，不输出任何信息，当我们只关心有没有匹配到，却不关心匹配到什么内容时，我们可以使用此命令，然后，使用”echo $?”查看是否匹配到，0表示匹配到，1表示没有匹配到。
+
+-P：表示使用兼容perl的正则引擎。
+
+-E：使用扩展正则表达式，而不是基本正则表达式，在使用”-E”选项时，相当于使用egrep。
+## 查找、不分区大小写-i、行号-n、匹配总数-c、仅显示关键字-o
 ```
-[huawei@10 postdb]$ grep hua /etc/passwd
-huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
+[huawei@n148 reg]$ cat testgrep 
+zsy test
+zsythink
 
-取反
-[huawei@10 postdb]$ grep -v hua /etc/passwd
-root:x:0:0:root:/root:/bin/bash
-bin:x:1:1:bin:/bin:/sbin/nologin
-daemon:x:2:2:daemon:/sbin:/sbin/nologin
-adm:x:3:4:adm:/var/adm:/sbin/nologin
+www.zsything.net
+TEST 123
+Zsy's articles
+grep Grep
+abc
+abc123bac
 
-行号
-[huawei@10 postdb]$ grep -n hua /etc/passwd
-48:huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
+[huawei@n148 reg]$ grep "TEST" testgrep 
+TEST 123
+[huawei@n148 reg]$ grep -i "TEST" testgrep 不分区大小写
+zsy test
+TEST 123
+[huawei@n148 reg]$ grep -in "TEST" testgrep 行号
+1:zsy test
+5:TEST 123
+[huawei@n148 reg]$ grep -ic  "TEST" testgrep 匹配总数
+2
+[huawei@n148 reg]$ grep -i -o "TEST" testgrep 仅显示关键字
+test
+TEST
+```
 
-匹配总数
-[huawei@10 postdb]$ grep -c hua /etc/passwd
+## 显示结果上下文，上n行 -Bn，下n行 -An
+可以2个都使用
+```
+[huawei@n148 reg]$ cat testgrep1
+姓名：朱双印
+年龄：18
+颜值：自认为爆表，其实很low
+
+姓名：王尼玛
+年龄：30
+颜值：带着头套，看不到脸
+
+姓名：王尼美
+年龄：18
+颜值：目测很丑
+[huawei@n148 reg]$ grep -B1 "年龄：18" testgrep1
+姓名：朱双印
+年龄：18
+--
+姓名：王尼美
+年龄：18
+
+[huawei@n148 reg]$ grep -A1 -B1 "年龄：18" testgrep1
+姓名：朱双印
+年龄：18
+颜值：自认为爆表，其实很low
+--
+姓名：王尼美
+年龄：18
+颜值：目测很丑
+
+```
+## 精准匹配-w、不包含-v、多重条件-e
+```
+huawei@n148 reg]$ grep "zsy"  testgrep 匹配出很多。。。
+zsy test
+zsythink
+www.zsything.net
+123zsy123
+[huawei@n148 reg]$ grep -w "zsy"  testgrep 匹配word级别
+zsy test
+[huawei@n148 reg]$ grep -v "zsy"  testgrep 匹配不包含关键字
+
+TEST 123
+Zsy's articles
+grep Grep
+abc
+abc123bac
+
+[huawei@n148 reg]$ grep -e "abc" -e "test"  testgrep 多重匹配
+zsy test
+abc
+abc123bac
+```
+## 静默执行-q与结果$?
+无输出，仅能通过$?获取是否匹配成功
+```
+[huawei@n148 reg]$ grep -q "test"  testgrep
+[huawei@n148 reg]$ echo $?
+0
+[huawei@n148 reg]$ grep -q "11111111111"  testgrep
+[huawei@n148 reg]$ echo $?
 1
-
-多个条件
-[huawei@10 postdb]$ grep -e  hua -e root  /etc/passwd
-root:x:0:0:root:/root:/bin/bash
-operator:x:11:0:operator:/root:/sbin/nologin
-huawei:x:1000:1000:huawei:/home/huawei:/bin/bash
+```
+## 简单正则匹配 -P
+使用perl的正则样式，标准的是-E
+```
+[huawei@n148 reg]$ cat testgrep2
+sdfasdf
+zsything@yeah.net
+asdfasdfasdfasdf@
+@asdfv
+[huawei@n148 reg]$ grep -P "[a-zA-Z0-9-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+"  testgrep2
+zsything@yeah.net
 
 ```
+# 正则 Reg
 # SED
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
@@ -550,13 +657,14 @@ END { printf("\n%10s %6d %5d\n", "TOTAL", area, pop) }
    England     94    56 Europe
 
      TOTAL  25681  2819
-
 ```
+
 ## 计数
 if $3>15 则emp+1
 ```
 [huawei@n148 playground]$ awk '$3>15 {emp=emp+1} END{print emp}' emp.data                                              3
- ```
+```
+
 ## 求和与平均值
 前提是总数不为0
 ```
@@ -710,8 +818,8 @@ France 211 55 Europe
 Japan 144 120 xxx
 Germany 96 61 Europe
 England 94 56 Europe
-
 ```
+
 # cat，more，less，tail，head 查看文件内容
 # wc 统计行数-l、字数-w、字节数-c
 ```
