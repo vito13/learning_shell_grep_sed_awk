@@ -497,7 +497,327 @@ asdfasdfasdfasdf@
 zsything@yeah.net
 
 ```
-# 正则 Reg
+# 正则 Regular Expression
+正则表达式，又称 规则表达式。正则表达式的英语原文为：Regular Expression，常简写为regex、regexp或RE，正则表达式是计算机科学的一个概念。正则表达式通常被用来检索、替换那些符合某个模式(规则)的文本。  
+```
+^：表示锚定行首，此字符后面的任意内容必须出现在行首，才能匹配。
+$：表示锚定行尾，此字符前面的任意内容必须出现在行尾，才能匹配。
+^$：表示匹配空行，这里所描述的空行表示”回车”，而”空格”或”tab”等都不能算作此处所的空行。
+^abc$：表示abc独占一行时，会被匹配到。
+\<或者\b ：匹配单词边界，表示锚定词首，其后面的字符必须作为单词首部出现。
+\>或者\b ：匹配单词边界，表示锚定词尾，其前面的字符必须作为单词尾部出现。
+\B：匹配非单词边界，与\b正好相反。
+*  表示前面的字符连续出现任意次，包括0次。
+.  表示任意单个字符。
+.* 表示任意长度的任意字符，与通配符中的*的意思相同。
+\? 表示匹配其前面的字符0或1次
+\+ 表示匹配其前面的字符至少1次，或者连续多次，连续次数上不封顶。
+\{n\} 表示前面的字符连续出现n次，将会被匹配到。
+\{x,y\} 表示之前的字符至少连续出现x次，最多连续出现y次，都能被匹配到，换句话* 只要之前的字符连续出现的次数在x与y之间，即可被匹配到。
+\{,n\} 表示之前的字符连续出现至多n次，最少0次，都会陪匹配到。
+\{n,\} 表示之前的字符连续出现至少n次，才会被匹配到.
+## 默认匹配，精准匹配，行首^ 行尾$ 空行^$
+.  表示匹配任意单个字符
+* 表示匹配前面的字符任意次，包括0次
+[  ] 表示匹配指定范围内的任意单个字符
+[^  ] 表示匹配指定范围外的任意单个字符
+ 
+[[:alpha:]]  表示任意大小写字母
+[[:lower:]]  表示任意小写字母
+[[:upper:]]  表示任意大写字母
+[[:digit:]]  表示0到9之间的任意单个数字（包括0和9）
+[[:alnum:]]  表示任意数字或字母
+[[:space:]]  表示任意空白字符，包括"空格"、"tab键"等。
+[[:punct:]]  表示任意标点符号
+ 
+[0-9]与[[:digit:]]等效
+[a-z]与[[:lower:]]等效
+[A-Z]与[[:upper:]]等效
+[a-zA-Z]与[[:alpha:]]等效
+[a-zA-Z0-9]与[[:alnum:]]等效
+ 
+[^0-9]与[^[:digit:]]等效
+[^a-z]与[^[:lower:]]等效
+[^A-Z]与[^[:upper:]]等效
+[^a-zA-Z]与[^[:alpha:]]等效
+[^a-zA-Z0-9]与[^[:alnum:]]等效
+ 
+#简短格式并非所有正则表达式解析器都可以识别
+\d 表示任意单个0到9的数字
+\D 表示任意单个非数字字符
+\t 表示匹配单个横向制表符（相当于一个tab键）
+\s表示匹配单个空白字符，包括"空格"，"tab制表符"等
+\S表示匹配单个非空白字符
+```
+
+```
+[huawei@n148 reg]$ cat regex
+hello world
+hello
+
+hi hello
+
+hello ,zsy
+
+[huawei@n148 reg]$ grep 'hello' regex
+hello world
+hello
+hi hello
+hello ,zsy
+[huawei@n148 reg]$ grep '^hello' regex
+hello world
+hello
+hello ,zsy
+[huawei@n148 reg]$ grep 'hello$' regex
+hello
+hi hello
+[huawei@n148 reg]$ grep '^hello$' regex
+hello
+[huawei@n148 reg]$ grep '^$' regex
+
+
+
+[huawei@n148 reg]$
+```
+
+## 词首\b 词尾\b 非词首\B 非词尾\B
+非词首非词尾即一个字符串里包含了要找的子串
+```
+
+[huawei@n148 reg]$ cat -n REG
+     1  abchello world
+     2  abc helloabc abc
+     3  abc abcabchelloabc abc
+     4  abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\bhello" REG
+abc helloabc abc
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "hello\b" REG
+abchello world
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\bhello\b" REG
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\Bhello" REG
+abchello world
+abc abcabchelloabc abc
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$
+```
+
+## 匹配指定范围内的连续单个字符
+```
+\{x\}  表示之前的字符连续出现x次时会被匹配到。  
+\{x,y\} 表示之前的字符至少连续出现x次，至多连续出现y次，都可以被匹配到，x与y之间用逗号隔开。  
+\{x,\}表示之前的字符至少连续出现x次，或者连续出现次数大于x次，即可被匹配到，上不封顶。  
+\{,y\}表示之前的字符至多连续出现y次，或者连续出现次数小于y次，即可被匹配到，最小次数为0次，换句话说，之前的字符连续出现0次到y次，都会被匹配到。  
+
+[huawei@n148 reg]$ cat regex.txt
+a a
+aa
+a aa
+bb
+bbb
+c cc ccc
+dddd d dd ddd
+ab abc abcc
+ef eef eeef
+[huawei@n148 reg]$ grep -n "a\{2\}" regex.txt
+2:aa
+3:a aa
+[huawei@n148 reg]$ grep -n "b\{2\}" regex.txt 匹配连续2个b
+4:bb
+5:bbb
+[huawei@n148 reg]$ grep -n "\<b\{2\}\>" regex.txt 精准匹配b开头b结尾连续2个b
+4:bb
+[huawei@n148 reg]$ grep -n "d\{2,4\}" regex.txt 匹配连续2~4次连续d
+7:dddd d dd ddd
+[huawei@n148 reg]$ grep -n "d\{2,\}" regex.txt 匹配连续2~无限次连续d
+7:dddd d dd ddd
+[huawei@n148 reg]$ grep -n "abc\{,2\}" regex.txt 匹配连续0~2次c
+8:ab abc abcc
+```
+## 通配任意字符 . *
+
+```
+*表示之前的字符连续出现任意次数（包括0次）
+.表示匹配任意单个字符
+使用 .* 表示任意长度的任意字符，与通配符中的*所表达的意思一样
+
+[huawei@n148 reg]$ grep -n "e*f" regex.txt	匹配n次e后接f的
+9:ef eef eeef
+[huawei@n148 reg]$ grep -n "d*" regex.txt 匹配n次d的，包含0次所以匹配了所有行
+1:a a
+2:aa
+3:a aa
+4:bb
+5:bbb
+6:c cc ccc
+7:dddd d dd ddd
+8:ab abc abcc
+9:ef eef eeef
+
+[huawei@n148 reg]$ grep -n "ee." regex.txt 匹配ee开头后跟一个任意字符
+9:ef eef eeef
+[huawei@n148 reg]$ grep -n "ee.." regex.txt 匹配ee开头后跟儿个任意字符
+9:ef eef eeef
+
+[huawei@n148 reg]$ grep -n "a.*" regex.txt 匹配a开头的行
+1:a a
+2:aa
+3:a aa
+8:ab abc abcc
+
+```
+## 匹配前字符0~1次、匹配前字符1~无限从
+```
+\? 表示匹配其前面的字符0或1次，换句话说，就是前面的字符要么没有，要么有一个。
+\+ 表示匹配其前面的字符至少1次，换句话说，就是前面的字符必须有至少一个。
+
+[huawei@n148 reg]$ grep -n "abc\?" regex.txt
+8:ab abc abcc
+[huawei@n148 reg]$ grep -n "abc\+" regex.txt
+8:ab abc abcc
+```
+## 字母、大写字母、小写字母、数字、空白、符号
+```
+[[:alpha:]]  表示任意大小写字母
+[[:lower:]]  表示任意小写字母
+[[:upper:]]  表示任意大写字母
+[[:digit:]]  表示0到9之间的任意单个数字（包括0和9）
+[[:alnum:]]  表示任意数字或字母
+[[:space:]]  表示任意空白字符，包括”空格”、”tab键”等。
+[[:punct:]]  表示任意标点符号
+
+[huawei@n148 reg]$ cat reg1
+a
+a6d
+a89&
+a7idai8
+abcd
+aBdC
+aBCD
+a123
+a1a3
+[huawei@n148 reg]$ grep -n "a[[:lower:]]\{3\}" reg1 匹配a后面3个小写字母
+5:abcd
+[huawei@n148 reg]$ grep -n "a[a-z]\{3\}" reg1 匹配a后面3个小写字母
+5:abcd
+[huawei@n148 reg]$ grep -n "a[[:upper:]]\{3\}" reg1 匹配a后面3个大写字母
+7:aBCD
+[huawei@n148 reg]$ grep -n "a[A-Z]\{3\}" reg1 匹配a后面3个大写字母
+7:aBCD
+[huawei@n148 reg]$ grep -n "a[0-9]\{3\}" reg1 匹配a后面3个数字
+8:a123
+```
+## 匹配指定范围内的任意单个字符[]
+```
+[ ] 表示匹配指定范围内的任意单个字符，换句话说，就是字符与方括号[ ]内的任意一个字符相同，就可以被匹配到。
+[^ ]表示匹配指定范围外的任意单个字符，注意，它与[ ]的含义正好相反。
+[^0-9]与[^[:digit:]]等效
+[^a-z]与[^[:lower:]]等效
+[^A-Z]与[^[:upper:]]等效
+[^a-zA-Z]与[^[:alpha:]]等效
+[^a-zA-Z0-9]与[^[:alnum:]]等效
+
+[huawei@n148 reg]$ cat reg2
+bc
+bd
+be
+bf
+bg
+
+[huawei@n148 reg]$ grep -n "b[ceg]" reg2
+1:bc
+3:be
+5:bg
+
+
+[huawei@n148 reg]$ cat reg3
+c3
+cB
+cC
+cd
+cE
+c$
+c#
+[huawei@n148 reg]$ grep -n "c[Bd#3]" reg3
+1:c3
+2:cB
+4:cd
+7:c#
+[huawei@n148 reg]$ grep -n "c[^3BCDE]" reg3
+4:cd
+6:c$
+7:c#
+[huawei@n148 reg]$ grep -n "c[^0-9]" reg3 匹配e后跟字符不是数字的
+2:cB
+3:cC
+4:cd
+5:cE
+6:c$
+7:c#
+
+```
+
+## 分组、后向引用
+用于匹配连续n次的字符串
+
+```
+\( \) 表示分组，我们可以将其中的内容当做一个整体，分组可以嵌套。
+\(ab\) 表示将ab当做一个整体去处理。
+\1 表示引用整个表达式中第1个分组中的正则匹配到的结果。
+\2 表示引用整个表达式中第2个分组中的正则匹配到的结果。
+
+[huawei@n148 reg]$ cat reg6
+hello
+helloo
+hellooo
+hellohello
+[huawei@n148 reg]$ grep "\(hello\)\{2\}" reg6
+hellohello
+[huawei@n148 reg]$ cat reg6
+hello
+helloo
+hellooo
+hellohello
+abefefabefef
+[huawei@n148 reg]$ grep "\(hello\)\{2\}" reg6	
+hellohello
+[huawei@n148 reg]$ grep "\(ab\(ef\)\{2\}\)\{2\}" reg6
+abefefabefef
+
+[huawei@n148 reg]$ cat reg6
+hello
+helloo
+hellooo
+hellohello
+abefefabefef
+Hello world Hello
+Hiiii world Hiiii
+Hello world Hiiii
+Hello world Hiiii -- Hiiii
+Hiiii world Hello -- Hello
+
+[huawei@n148 reg]$ grep "\(hello\)\{2\}" reg6	匹配2个连续的hello
+hellohello
+[huawei@n148 reg]$ grep "\(ab\(ef\)\{2\}\)\{2\}" reg6	匹配2个连续的abefef，其中abefef部分类似嵌套
+abefefabefef
+[huawei@n148 reg]$ grep "H.\{4\} world H.\{4\}" reg6	匹配H开头后跟4个任意字符空格world空格再H开头后跟4个任意字符，此方法比较啰嗦。。。
+Hello world Hello
+Hiiii world Hiiii
+Hello world Hiiii
+Hello world Hiiii -- Hiiii
+Hiiii world Hello -- Hello
+[huawei@n148 reg]$ grep "\(H.\{4\}\) world \1" reg6	向后引用\1就代表前面匹配的内容，找出aba式样的字符串
+Hello world Hello
+Hiiii world Hiiii
+[huawei@n148 reg]$ grep "\(H.\{4\}\) world \(H.\{4\}\) -- \2" reg6	使用\2对应的第二个分组
+Hello world Hiiii -- Hiiii
+Hiiii world Hello -- Hello
+
+```
+![相后引用](https://www.zsythink.net/wp-content/uploads/2017/06/060117_1536_9.png)
+![嵌套的分组序号](https://www.zsythink.net/wp-content/uploads/2017/06/060117_1536_13.png)
 # SED
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
