@@ -983,6 +983,306 @@ tetregex@163.cccom
 ```
 
 # SED
+```
+sed中的编辑命令：
+i:插入  添加到匹配行的上一行
+a:追加  添加到匹配行的下一行
+c:更改  更改匹配的行的内容
+d:删除  删除匹配的行
+
+s:替换  替换掉匹配的内容
+p:打印  打印出匹配的内容，通常与-n选项和用
+=:用来打印被匹配的行的行号
+n:读取下一行，遇到n时会自动跳入下一行
+r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内容写入到文件
+```
+## 插入 i、追加 a
+```
+[huawei@n148 reg]$ cat 1.txt
+111
+222
+333
+444
+555
+
+[huawei@n148 reg]$ sed '3ixxxxxx' 1.txt		匹配指定行号
+111
+222
+xxxxxx
+333
+444
+555
+[huawei@n148 reg]$ sed '3axxxxxx' 1.txt
+111
+222
+333
+xxxxxx
+444
+555 
+
+
+[huawei@n148 reg]$ sed '/222/ixxxxxx' 1.txt		匹配指定内容
+111
+xxxxxx
+222
+333
+444
+555
+[huawei@n148 reg]$ sed '/222/axxxxxx' 1.txt
+111
+222
+xxxxxx
+333
+444
+555
+
+[huawei@n148 reg]$ sed '$ixxxxxx' 1.txt		匹配最末行
+111
+222
+333
+444
+xxxxxx
+555
+[huawei@n148 reg]$ sed '$axxxxxx' 1.txt
+111
+222
+333
+444
+555
+xxxxxx
+
+```
+## 更改行为指定内容 c
+```
+[huawei@n148 reg]$ cat 1.txt
+111 111
+222
+333  555
+
+444
+555  333
+[huawei@n148 reg]$ sed '1cxxxxxx' 1.txt		更改指定行
+xxxxxx
+222
+333  555
+
+444
+555  333
+
+[huawei@n148 reg]$ sed '/333/cxxxxxx' 1.txt		更改指定内容所在行
+111 111
+222
+xxxxxx
+
+444
+xxxxxx
+
+[huawei@n148 reg]$ sed '$cxxxxxx' 1.txt		更改最末行
+111 111
+222
+333  555
+
+444
+xxxxxx
+```
+## 删除行 d
+```
+[huawei@n148 reg]$ cat 1.txt
+111
+222
+333
+444
+555
+[huawei@n148 reg]$ sed '4d' 1.txt		删除指定行
+111
+222
+333
+555
+[huawei@n148 reg]$ sed '1~2d' 1.txt		从第一行开始删除，每隔2行就删掉一行，即删除奇数行
+222
+444
+[huawei@n148 reg]$ sed '1,2d' 1.txt   	删除1~2行
+333
+444
+555
+[huawei@n148 reg]$ sed '1,2!d' 1.txt	删除1~2之外的所有行
+111
+222
+[huawei@n148 reg]$ sed '$d' 1.txt		删除最后一行
+111
+222
+333
+444
+[huawei@n148 reg]$ sed '/3/d' 1.txt		删除匹配含有3的行
+111
+222
+444
+555
+[huawei@n148 reg]$ sed '/3/,$d' 1.txt		删除从匹配3的行到最后一行
+111
+222
+[huawei@n148 reg]$ sed '/2/,+2d' 1.txt		删除匹配2的行及其后面2行
+111
+555
+[huawei@n148 reg]$ sed '/^$/d' 1.txt		删除空行
+111
+222
+333
+444
+555
+[huawei@n148 reg]$ sed '/2\|3/!d' 1.txt		删除不匹配2或3的行，/2\|3/ 表示匹配2或3 ，！表示取反
+222
+333
+[huawei@n148 reg]$ sed '1,3{/2/d}' 1.txt	删除1~3行中，匹配内容2的行，1,3表示匹配1~3行，{/2/d}表示删除
+111
+333
+444
+555
+```
+## 替换内容
+```
+
+[huawei@n148 reg]$ sed 's/2/hello/' 1.txt		将文件中的2替换为hello，默认只替换每行第一个2
+111
+hello22
+333
+444
+555
+[huawei@n148 reg]$ sed 's/2/hello/g' 1.txt		将文本中所有的2都替换为hello
+111
+hellohellohello
+333
+444
+555
+[huawei@n148 reg]$ sed 's/2/hello/3' 1.txt		将每行中第3个匹配的2替换为hello
+111
+22hello
+333
+444
+555
+===================================
+
+将每行中所有匹配的2替换为hello，并将替换后的内容写入2.txt，这里仅打印了替换后的匹配行
+
+
+[huawei@n148 reg]$ sed -n 's/2/hello/gpw 2.txt' 1.txt	
+hellohellohello
+[huawei@n148 reg]$ cat 2.txt
+hellohellohello
+===================================
+
+匹配有#号的行，替换匹配行中逗号后的所有内容为空  (,.*)表示逗号后的所有内容
+
+[huawei@n148 reg]$ cat 1.txt
+#abc,123
+#123,{[?>|
+,def#
+#456,%$#
+123#,hello
+[huawei@n148 reg]$ sed '/#/s/,.*//g' 1.txt 
+#abc
+#123
+
+#456
+123#
+
+===================================
+
+替换每行中的最后两个字符为空，每个点代表一个字符，$表示匹配末尾  （..$）表示匹配最后两个字符
+
+[huawei@n148 reg]$ cat 1.txt
+abc,123
+123#$
+def,?
+456@qq
+12
+[huawei@n148 reg]$ sed 's/..$//g' 1.txt
+abc,1
+123
+def
+456@
+
+===================================
+
+将1.txt文件中以#开头的行替换为空行，即注释的行  ( ^#)表示匹配以#开头，（.*）代表所有内容
+
+[huawei@n148 reg]$ cat 1.txt
+#abc,123
+123#$
+#def,?
+#456@qq
+123,#$%%
+[huawei@n148 reg]$ sed 's/^#.*//'  1.txt
+
+123#$
+
+
+123,#$%%
+
+===================================
+
+先替换1.txt文件中所有带注释行为空行，然后删除空行，替换和删除操作中间用分号隔开
+
+[huawei@n148 reg]$ cat 1.txt
+#abc,123
+123#$
+#def,?
+#456@qq
+123,#$%%
+
+hello
+[huawei@n148 reg]$ sed 's/^#.*//;/^$/d'  1.txt	
+123#$
+123,#$%%
+hello
+===================================
+
+方法1：将每一行中行首的数字加上一个小括号   (^[0-9])表示行首是数字，&符号代表匹配的内容
+
+方法2：替换左侧特殊字符需钥转义，右侧不需要转义，\1代表匹配的内容
+
+[huawei@n148 reg]$ cat 1.txt
+1.hello bob 4
+2.how are you 2
+3.I am funning thanks 1
+4.and you 3
+I am funning too 5
+[huawei@n148 reg]$ sed 's/^[0-9]/(&)/' 1.txt	方法1
+(1).hello bob 4
+(2).how are you 2
+(3).I am funning thanks 1
+(4).and you 3
+I am funning too 5
+[huawei@n148 reg]$ sed 's/[0−9]/(1)/' 1.txt		方法2
+1.hello bob 4
+2.how are you 2
+3.I am funning thanks 1
+4.and you 3
+I am funning too 5
+===================================
+
+在1.txt文件的每一行后面加上"haha"字段
+
+[huawei@n148 reg]$ cat 1.txt
+#abc,123
+123#$
+#def,?
+#456@qq
+123,#$%%
+
+hello
+[huawei@n148 reg]$ sed  's/$/&'haha'/'  1.txt
+#abc,123haha
+123#$haha
+#def,?haha
+#456@qqhaha
+123,#$%%haha
+haha
+hellohaha
+===================================
+```
+
+
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
 ## 内建变量
