@@ -983,17 +983,22 @@ tetregex@163.cccom
 ```
 
 # SED
+Stream Editor文本流编辑，sed是一个“非交互式的”面向字符流的编辑器。能同时处理多个文件多行的内容，可以不对原文件改动，把整个文件输入到屏幕,可以把只匹配到模式的内容输入到屏幕上。还可以对原文件改动，但是不会再屏幕上返回结果。
+https://www.cnblogs.com/ctaixw/p/5860221.html
+https://blog.csdn.net/wdz306ling/article/details/80087889  
+sed 绝不会修改原始文件 input-file,它只是将结果内容输出到标准输出设备。如果要保
+持变更，应该使用重定向 > filename.txt
+
 ```
 sed中的编辑命令：
 i:插入  添加到匹配行的上一行
 a:追加  添加到匹配行的下一行
 c:更改  更改匹配的行的内容
 d:删除  删除匹配的行
-
 s:替换  替换掉匹配的内容
-p:打印  打印出匹配的内容，通常与-n选项和用
+p:打印匹配行（和-n选项一起合用）
 =:用来打印被匹配的行的行号
-n:读取下一行，遇到n时会自动跳入下一行
+n:输出  只打印模式匹配的行，否则会输出所有
 r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内容写入到文件
 ```
 ## 插入 i、追加 a
@@ -1004,14 +1009,18 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 333
 444
 555
+===================================
 
-[huawei@n148 reg]$ sed '3ixxxxxx' 1.txt		匹配指定行号
+匹配指定行号
+[huawei@n148 reg]$ sed '3ixxxxxx' 1.txt
 111
 222
 xxxxxx
 333
 444
 555
+===================================
+
 [huawei@n148 reg]$ sed '3axxxxxx' 1.txt
 111
 222
@@ -1019,15 +1028,18 @@ xxxxxx
 xxxxxx
 444
 555 
+===================================
 
-
-[huawei@n148 reg]$ sed '/222/ixxxxxx' 1.txt		匹配指定内容
+匹配指定内容
+[huawei@n148 reg]$ sed '/222/ixxxxxx' 1.txt
 111
 xxxxxx
 222
 333
 444
 555
+===================================
+
 [huawei@n148 reg]$ sed '/222/axxxxxx' 1.txt
 111
 222
@@ -1035,14 +1047,18 @@ xxxxxx
 333
 444
 555
+===================================
 
-[huawei@n148 reg]$ sed '$ixxxxxx' 1.txt		匹配最末行
+匹配最末行
+[huawei@n148 reg]$ sed '$ixxxxxx' 1.txt
 111
 222
 333
 444
 xxxxxx
 555
+===================================
+
 [huawei@n148 reg]$ sed '$axxxxxx' 1.txt
 111
 222
@@ -1050,10 +1066,10 @@ xxxxxx
 444
 555
 xxxxxx
-
 ```
 ## 更改行为指定内容 c
 ```
+===================================
 [huawei@n148 reg]$ cat 1.txt
 111 111
 222
@@ -1061,23 +1077,30 @@ xxxxxx
 
 444
 555  333
-[huawei@n148 reg]$ sed '1cxxxxxx' 1.txt		更改指定行
+===================================
+
+更改指定行
+[huawei@n148 reg]$ sed '1cxxxxxx' 1.txt
 xxxxxx
 222
 333  555
 
 444
 555  333
+===================================
 
-[huawei@n148 reg]$ sed '/333/cxxxxxx' 1.txt		更改指定内容所在行
+更改指定内容所在行
+[huawei@n148 reg]$ sed '/333/cxxxxxx' 1.txt
 111 111
 222
 xxxxxx
 
 444
 xxxxxx
+===================================
 
-[huawei@n148 reg]$ sed '$cxxxxxx' 1.txt		更改最末行
+更改最末行
+[huawei@n148 reg]$ sed '$cxxxxxx' 1.txt
 111 111
 222
 333  555
@@ -1093,68 +1116,107 @@ xxxxxx
 333
 444
 555
-[huawei@n148 reg]$ sed '4d' 1.txt		删除指定行
-111
-222
-333
-555
-[huawei@n148 reg]$ sed '1~2d' 1.txt		从第一行开始删除，每隔2行就删掉一行，即删除奇数行
-222
-444
-[huawei@n148 reg]$ sed '1,2d' 1.txt   	删除1~2行
-333
-444
-555
-[huawei@n148 reg]$ sed '1,2!d' 1.txt	删除1~2之外的所有行
-111
-222
-[huawei@n148 reg]$ sed '$d' 1.txt		删除最后一行
-111
-222
-333
-444
-[huawei@n148 reg]$ sed '/3/d' 1.txt		删除匹配含有3的行
-111
-222
-444
-555
-[huawei@n148 reg]$ sed '/3/,$d' 1.txt		删除从匹配3的行到最后一行
-111
-222
-[huawei@n148 reg]$ sed '/2/,+2d' 1.txt		删除匹配2的行及其后面2行
-111
-555
-[huawei@n148 reg]$ sed '/^$/d' 1.txt		删除空行
-111
-222
-333
-444
-555
-[huawei@n148 reg]$ sed '/2\|3/!d' 1.txt		删除不匹配2或3的行，/2\|3/ 表示匹配2或3 ，！表示取反
-222
-333
-[huawei@n148 reg]$ sed '1,3{/2/d}' 1.txt	删除1~3行中，匹配内容2的行，1,3表示匹配1~3行，{/2/d}表示删除
-111
-333
-444
-555
-```
-## 替换内容
-```
+===================================
 
-[huawei@n148 reg]$ sed 's/2/hello/' 1.txt		将文件中的2替换为hello，默认只替换每行第一个2
+删除指定行
+[huawei@n148 reg]$ sed '4d' 1.txt
+111
+222
+333
+555
+===================================
+
+从第一行开始删除，每隔2行就删掉一行，即删除奇数行
+[huawei@n148 reg]$ sed '1~2d' 1.txt
+222
+444
+===================================
+
+删除1~2行
+[huawei@n148 reg]$ sed '1,2d' 1.txt
+333
+444
+555
+===================================
+
+删除1~2之外的所有行
+[huawei@n148 reg]$ sed '1,2!d' 1.txt
+111
+222
+===================================
+
+删除最后一行
+[huawei@n148 reg]$ sed '$d' 1.txt
+111
+222
+333
+444
+===================================
+
+删除匹配含有3的行
+[huawei@n148 reg]$ sed '/3/d' 1.txt
+111
+222
+444
+555
+===================================
+
+删除从匹配3的行到最后一行
+[huawei@n148 reg]$ sed '/3/,$d' 1.txt
+111
+222
+===================================
+
+删除匹配2的行及其后面2行
+[huawei@n148 reg]$ sed '/2/,+2d' 1.txt
+111
+555
+===================================
+
+删除空行
+[huawei@n148 reg]$ sed '/^$/d' 1.txt
+111
+222
+333
+444
+555
+===================================
+
+删除不匹配2或3的行，/2\|3/ 表示匹配2或3 ，！表示取反
+[huawei@n148 reg]$ sed '/2\|3/!d' 1.txt
+222
+333
+===================================
+
+删除1~3行中，匹配内容2的行，1,3表示匹配1~3行，{/2/d}表示删除
+[huawei@n148 reg]$ sed '1,3{/2/d}' 1.txt
+111
+333
+444
+555
+```
+## 替换内容 s
+```
+将文件中的2替换为hello，默认只替换每行第一个2
+[huawei@n148 reg]$ sed 's/2/hello/' 1.txt
 111
 hello22
 333
 444
 555
-[huawei@n148 reg]$ sed 's/2/hello/g' 1.txt		将文本中所有的2都替换为hello
+===================================
+
+将文本中所有的2都替换为hello
+[huawei@n148 reg]$ sed 's/2/hello/g' 1.txt
 111
 hellohellohello
 333
 444
 555
-[huawei@n148 reg]$ sed 's/2/hello/3' 1.txt		将每行中第3个匹配的2替换为hello
+===================================
+
+将每行中第3个匹配的2替换为hello
+[huawei@n148 reg]$ sed 's/2/hello/3' 1.txt
 111
 22hello
 333
@@ -1163,8 +1225,6 @@ hellohellohello
 ===================================
 
 将每行中所有匹配的2替换为hello，并将替换后的内容写入2.txt，这里仅打印了替换后的匹配行
-
-
 [huawei@n148 reg]$ sed -n 's/2/hello/gpw 2.txt' 1.txt	
 hellohellohello
 [huawei@n148 reg]$ cat 2.txt
@@ -1172,7 +1232,6 @@ hellohellohello
 ===================================
 
 匹配有#号的行，替换匹配行中逗号后的所有内容为空  (,.*)表示逗号后的所有内容
-
 [huawei@n148 reg]$ cat 1.txt
 #abc,123
 #123,{[?>|
@@ -1189,7 +1248,6 @@ hellohellohello
 ===================================
 
 替换每行中的最后两个字符为空，每个点代表一个字符，$表示匹配末尾  （..$）表示匹配最后两个字符
-
 [huawei@n148 reg]$ cat 1.txt
 abc,123
 123#$
@@ -1205,7 +1263,6 @@ def
 ===================================
 
 将1.txt文件中以#开头的行替换为空行，即注释的行  ( ^#)表示匹配以#开头，（.*）代表所有内容
-
 [huawei@n148 reg]$ cat 1.txt
 #abc,123
 123#$
@@ -1222,7 +1279,6 @@ def
 ===================================
 
 先替换1.txt文件中所有带注释行为空行，然后删除空行，替换和删除操作中间用分号隔开
-
 [huawei@n148 reg]$ cat 1.txt
 #abc,123
 123#$
@@ -1238,9 +1294,7 @@ hello
 ===================================
 
 方法1：将每一行中行首的数字加上一个小括号   (^[0-9])表示行首是数字，&符号代表匹配的内容
-
 方法2：替换左侧特殊字符需钥转义，右侧不需要转义，\1代表匹配的内容
-
 [huawei@n148 reg]$ cat 1.txt
 1.hello bob 4
 2.how are you 2
@@ -1262,7 +1316,6 @@ I am funning too 5
 ===================================
 
 在1.txt文件的每一行后面加上"haha"字段
-
 [huawei@n148 reg]$ cat 1.txt
 #abc,123
 123#$
@@ -1280,9 +1333,323 @@ hello
 haha
 hellohaha
 ===================================
+
+给雇员 ID(即第一列的 3 个数字)加上[ ],如 101 改成[101]
+[huawei@n148 sed]$ cat 1.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed 's/^[0-9][0-9][0-9]/[&]/g' 1.txt
+[101],John Doe,CEO
+[102],Jason Smith,IT Manager
+[103],Raj Reddy,Sysadmin
+[104],Anand Ram,Developer
+[105],Jane Miller,Sales Manager
+
+把每一行放进< >中
+[huawei@n148 sed]$ sed 's/^.*/<&>/' 1.txt
+<101,John Doe,CEO>
+<102,Jason Smith,IT Manager>
+<103,Raj Reddy,Sysadmin>
+<104,Anand Ram,Developer>
+<105,Jane Miller,Sales Manager>
+```
+## 打印匹配的行 n p
+```
+===================================
+
+打印指定文件所有行，效果同cat
+[huawei@n148 sed]$ sed -n 'p' 1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+4.and you
+5.I am funning too
+===================================
+
+打印文件中的第三行内容
+[huawei@n148 sed]$ sed  -n '3p'  1.txt
+3.I am funning thanks
+===================================
+
+从第二行开始，每隔两行打印一行，波浪号后面的2表示步长
+1~2 匹配 1,3,5,7,……
+2~2 匹配 2,4,6,8,……
+1~3 匹配 1,4,7,10,…..
+2~3 匹配 2,5,8,11,…..
+[huawei@n148 sed]$ sed  -n '2~2p'  1.txt
+2.how are you
+4.and you
+===================================
+
+打印文件的最后一行
+[huawei@n148 sed]$ sed -n '$p'  1.txt
+5.I am funning too
+===================================
+
+打印1到3行
+[huawei@n148 sed]$ sed -n '1,3p'  1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+===================================
+
+打印从第3行到最后一行的内容
+[huawei@n148 sed]$ sed  -n '3,$p'  1.txt
+3.I am funning thanks
+4.and you
+5.I am funning too
+===================================
+
+逐行读取文件，打印匹配you的行
+[huawei@n148 sed]$ sed  -n '/you/p'  1.txt
+2.how are you
+4.and you
+===================================
+
+逐行读取文件，打印从匹配bob的行到第3行的内容，若匹配行在第3行之后则仅打印匹配行，下同
+[huawei@n148 sed]$ sed  -n '/bob/,3p'  1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+===================================
+
+打印匹配you 的行到第3行，也打印后面所有匹配you 的行
+[huawei@n148 sed]$ sed  -n  '/you/,3p'  1.txt
+2.how are you
+3.I am funning thanks
+4.and you
+===================================
+
+打印第一行到匹配too的行
+[huawei@n148 sed]$ sed  -n '1,/too/p'  1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+4.and you
+5.I am funning too
+===================================
+
+只打印第三行到匹配you的行
+[huawei@n148 sed]$ sed  -n  '3,/you/p'  1.txt
+3.I am funning thanks
+4.and you
+===================================
+
+打印从匹配too的行到最后一行的内容
+[huawei@n148 sed]$ sed  -n '/too/,$p'  1.txt
+5.I am funning too
+6.is you
+7.what is rong with you
+===================================
+
+打印匹配too的行及其向后一行，如果有多行匹配too，则匹配的每一行都会向后多打印一行
+[huawei@n148 sed]$ sed  -n '/too/,+1p'  1.txt
+5.I am funning too
+6.is you
+===================================
+
+打印从匹配内容bob到匹配内容too的行
+[huawei@n148 sed]$ sed  -n '/bob/,/too/p'  1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+4.and you
+5.I am funning too
+```
+## 打印行号 n p
+```
+[huawei@n148 sed]$ cat 1.txt
+1.hello bob
+2.how are you
+3.I am funning thanks
+4.and you
+5.I am funning too
+6.is you error
+7.what is rong with you
+===================================
+
+打印1.txt文件最后一行的行号（即文件有多少行，和wc -l 功能类似）
+[huawei@n148 sed]$ sed  -n "$="   1.txt
+7
+===================================
+
+打印匹配error的行的行号
+[huawei@n148 sed]$ sed  -n '/error/='  1.txt
+6
+===================================
+
+打印匹配error的行的行号和内容（可用于查看日志中有error的行及其内容）
+[huawei@n148 sed]$ sed  -n '/error/{=;p}'   1.txt
+6
+6.is you error
+```
+## 读取文件 r
+```
+[huawei@n148 sed]$ cat 1.txt
+123
+245
+789
+[huawei@n148 sed]$ cat 2.txt
+abc
+xyz
+qqw
+===================================
+
+将文件2.txt中的内容，读入1.txt中，会在1.txt中的每一行后都读入2.txt的内容
+[huawei@n148 sed]$ sed  'r 2.txt'  1.txt
+123
+abc
+xyz
+qqw
+245
+abc
+xyz
+qqw
+789
+abc
+xyz
+qqw
+===================================
+
+在1.txt的第2行之后插入文件2.txt的内容（可用于向文件中插入内容）
+[huawei@n148 sed]$ sed '2r 2.txt'  1.txt
+123
+245
+abc
+xyz
+qqw
+789
+===================================
+
+在匹配245的行之后插入文件2.txt的内容，如果1.txt中有多行匹配456则在每一行之后都会插入
+[huawei@n148 sed]$ sed  '/245/r   2.txt'   1.txt
+123
+245
+abc
+xyz
+qqw
+789
+===================================
+
+在1.txt的最后一行插入2.txt的内容
+[huawei@n148 sed]$ sed  '$r  2.txt'   1.txt
+123
+245
+789
+abc
+xyz
+qqw
+```
+## 写入文件 w
 ```
 
+[huawei@n148 sed]$ cat 1.txt
+123
+245
+789
+[huawei@n148 sed]$ cat 2.txt
+abc
+xyz
+qqw
+===================================
 
+将1.txt文件的内容写入2.txt文件，如果2.txt文件不存在则创建，如果2.txt存在则覆盖之前的内容
+[huawei@n148 sed]$ sed  -n  'w 2.txt'   1.txt
+[huawei@n148 sed]$ cat 2.txt
+123
+245
+789
+===================================
+
+将文件1.txt中的第2行内容写入到文件2.txt
+[huawei@n148 sed]$ sed   -n '2w  2.txt'   1.txt
+[huawei@n148 sed]$ cat 2.txt
+245
+===================================
+
+将1.txt的第1行和最后一行内容写入2.txt
+[huawei@n148 sed]$ sed  -n -e '1w  2.txt'  -e '$w 2.txt'   1.txt
+[huawei@n148 sed]$ cat 2.txt
+123
+789
+===================================
+
+将1.txt的第1行和最后一行分别写入2.txt和3.txt
+[huawei@n148 sed]$ sed  -n -e '1w  2.txt'  -e '$w  3.txt'  1.txt
+[huawei@n148 sed]$ cat 2.txt
+123
+[huawei@n148 sed]$ cat 3.txt
+789
+===================================
+
+将1.txt中匹配abc或123的行的内容，写入到2.txt中
+[huawei@n148 sed]$ cat 1.txt
+123
+abc
+xyz
+666
+123,xyz,abc
+[huawei@n148 sed]$ sed  -n  '/abc\|123/w  2.txt'    1.txt
+[huawei@n148 sed]$ cat 2.txt
+123
+abc
+123,xyz,abc
+===================================
+
+将1.txt中从匹配666的行到最后一行的内容，写入到2.txt中
+[huawei@n148 sed]$ sed  -n '/666/,$w 2.txt'   1.txt
+[huawei@n148 sed]$ cat 2.txt
+666
+123,xyz,abc
+===================================
+
+将1.txt中从匹配xyz的行及其后2行的内容，写入到2.txt中
+[huawei@n148 sed]$ cat 1.txt
+666
+999
+xyz
+111
+333
+555
+[huawei@n148 sed]$ sed  -n  '/xyz/,+2w  2.txt'     1.txt
+[huawei@n148 sed]$ cat 2.txt
+xyz
+111
+333
+```
+## 执行sed脚本 f
+把具体的sed命令放入文件中
+```
+[huawei@n148 sed]$ cat test-script.sed
+/^root/ p
+/^nobody/ p
+
+[huawei@n148 sed]$ sed -n -f test-script.sed  /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+nobody:x:99:99:Nobody:/:/sbin/nologin
+```
+
+## 多个命令 e
+```
+[huawei@n148 sed]$ sed -n -e'/^root/ p' -e'/^nobody/ p'  /etc/passwd;
+root:x:0:0:root:/root:/bin/bash
+nobody:x:99:99:Nobody:/:/sbin/nologin
+```
+
+## 分组
+
+```
+正则表达式\([^,]*\)匹配字符串从开头到第一个逗号之间的所有字符(并将其放入第一个分组中), replacement-string 中的\1 将替代匹配到的分组, g即是全局标志
+
+[huawei@n148 sed]$ sed 's/\([^:]*\).*/\1/' /etc/passwd
+root
+bin
+daemon
+
+```
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
 ## 内建变量
