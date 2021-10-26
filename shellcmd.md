@@ -599,6 +599,22 @@ hello
 非词首非词尾即一个字符串里包含了要找的子串
 ```
 
+[huawei@n148 sed]$ cat words.txt
+word matching using: the
+word matching using: thethe
+word matching using: they
+
+匹配包含 the 作为整个单词的行：
+[huawei@n148 sed]$ sed -n '/\bthe\b/ p' words.txt
+word matching using: the
+
+匹配所有以 the 开头的单词:
+[huawei@n148 sed]$ sed -n '/\bthe/ p' words.txt
+word matching using: the
+word matching using: thethe
+word matching using: they
+
+
 [huawei@n148 reg]$ cat -n REG
      1  abchello world
      2  abc helloabc abc
@@ -618,13 +634,30 @@ abc abcabchelloabc abc
 abchello helloabc hello ahelloa
 [huawei@n148 reg]$
 ```
-
-## 匹配指定范围内的连续单个字符
+## 精准匹配m次 {m}
+\{m\}  表示之前的字符连续出现m次时会被匹配到。  
 ```
-\{x\}  表示之前的字符连续出现x次时会被匹配到。  
-\{x,y\} 表示之前的字符至少连续出现x次，至多连续出现y次，都可以被匹配到，x与y之间用逗号隔开。  
-\{x,\}表示之前的字符至少连续出现x次，或者连续出现次数大于x次，即可被匹配到，上不封顶。  
-\{,y\}表示之前的字符至多连续出现y次，或者连续出现次数小于y次，即可被匹配到，最小次数为0次，换句话说，之前的字符连续出现0次到y次，都会被匹配到。  
+[huawei@n148 sed]$ cat numbers.txt
+1
+12
+123
+1234
+12345
+123456
+
+打印包含任意数字的行(这个命令将打印所有行)
+[huawei@n148 sed]$ sed -n '/[0-9]/ p' numbers.txt
+1
+12
+123
+1234
+12345
+123456
+
+打印包含 5 个数字的行,注意这里一定要有开头和结尾符号，即^和$,并且{和}都要用\转义
+[huawei@n148 sed]$ sed -n '/^[0-9]\{5\}$/ p' numbers.txt
+12345
+
 
 [huawei@n148 reg]$ cat regex.txt
 a a
@@ -644,6 +677,34 @@ ef eef eeef
 5:bbb
 [huawei@n148 reg]$ grep -n "\<b\{2\}\>" regex.txt 精准匹配b开头b结尾连续2个b
 4:bb
+```
+## 匹配m至n次 {m,n}
+正则表达式后面跟上{m,n}表明精确匹配该正则至少 m，最多 n 次。m 和 n 不能是负数，并且要小于 255. 正则表达式后面跟上{m,}表明精确匹配该正则至少 m，最多不限。(同样，如果是{,n}表明最多匹配 n 次，最少一次)。
+
+```
+[huawei@n148 sed]$ cat numbers.txt
+1
+12
+123
+1234
+12345
+123456
+打印由 3 至 5 个数字组成的行：
+[huawei@n148 sed]$ sed -n '/^[0-9]\{3,5\}$/ p' numbers.txt
+123
+1234
+12345
+
+[huawei@n148 reg]$ cat regex.txt
+a a
+aa
+a aa
+bb
+bbb
+c cc ccc
+dddd d dd ddd
+ab abc abcc
+ef eef eeef
 [huawei@n148 reg]$ grep -n "d\{2,4\}" regex.txt 匹配连续2~4次连续d
 7:dddd d dd ddd
 [huawei@n148 reg]$ grep -n "d\{2,\}" regex.txt 匹配连续2~无限次连续d
@@ -688,10 +749,27 @@ ef eef eeef
 \? 表示匹配其前面的字符0或1次，换句话说，就是前面的字符要么没有，要么有一个。
 \+ 表示匹配其前面的字符至少1次，换句话说，就是前面的字符必须有至少一个。
 
-[huawei@n148 reg]$ grep -n "abc\?" regex.txt
-8:ab abc abcc
-[huawei@n148 reg]$ grep -n "abc\+" regex.txt
-8:ab abc abcc
+[huawei@n148 sed]$ cat log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+
+显示包含 log:并且 log:后面有一个或多个空格的所有行：
+[huawei@n148 sed]$ sed -n '/log: \+/ p' log.txt
+log: input.txt
+log: testing resumed
+
+
+显示包含 log:并且 log:后面有0个或1个空格的所有行：
+[huawei@n148 sed]$ sed -n '/log: \?/ p' log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+
 ```
 ## 字母、大写字母、小写字母、数字、空白、符号
 ```
@@ -774,7 +852,7 @@ c#
 
 ```
 
-## 分组、后向引用
+## 分组、后向引用（回溯引用）
 用于匹配连续n次的字符串
 
 ```
@@ -782,6 +860,15 @@ c#
 \(ab\) 表示将ab当做一个整体去处理。
 \1 表示引用整个表达式中第1个分组中的正则匹配到的结果。
 \2 表示引用整个表达式中第2个分组中的正则匹配到的结果。
+
+[huawei@n148 sed]$ cat words.txt
+word matching using: the
+word matching using: thethe
+word matching using: they
+只匹配重复 the 两次的行:
+[huawei@n148 sed]$ sed -n '/\(the\)\1/ p' words.txt
+word matching using: thethe
+
 
 [huawei@n148 reg]$ cat reg6
 hello
@@ -839,6 +926,9 @@ Hiiii world Hello -- Hello
 转义这几个:  \.  \*  \?   \+  \\
 转义\就要用到单引号；
 转义其他符号就要用到双引号；
+
+[huawei@n148 sed]$ sed -n '/127\.0\.0\.1/ p' /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
 
 [huawei@n148 reg]$ cat reg11
 bae
@@ -954,7 +1044,17 @@ $：表示锚定行尾，此字符前面的任意内容必须出现在行尾，�
         inet 192.168.122.1  netmask 255.255.255.0  broadcast 192.168.122.255
 
 ```
-## 固定结尾、或关系|
+## 行首^	行尾$
+```
+[huawei@n148 sed]$ sed -n '/^103/ p' employee.txt	匹配103开头的
+103,Raj Reddy,Sysadmin
+[huawei@n148 sed]$ sed -n '/r$/ p' employee.txt		匹配r结尾的
+102,Jason Smith,IT Manager
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+```
+## 或关系|
 ```
 [huawei@n148 reg]$ cat mail
 zsything@zsything.net
@@ -969,17 +1069,34 @@ tetregex@zsything.ttt
 a@1.com
 tetregex@163.cccom
 
-[huawei@n148 reg]$ grep -E "net$" mail		匹配net结尾的
-zsything@zsything.net
-zhuangshuangyin@szything.net
-tetregex@163zsy.net
-[huawei@n148 reg]$ grep -E "(com|net)$" mail	匹配com或net结尾的
+匹配com或net结尾的
+[huawei@n148 reg]$ grep -E "(com|net)$" mail
 zsything@zsything.net
 zhuangshuangyin@szything.net
 tetregex@163.com
 tetregex@163zsy.net
 a@1.com
 tetregex@163.cccom
+
+
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+打印包含 101 或者包含 102 的行：
+[huawei@n148 sed]$ sed -n '/101\|102/ p' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+
+打印包含数字 2~3 或者包含 105 的行：
+[huawei@n148 sed]$ sed -n '/[2-3]\|105/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+105,Jane Miller,Sales Manager
+
 ```
 
 # SED
@@ -1173,6 +1290,14 @@ xxxxxx
 555
 ===================================
 
+删除所有注释与空行
+[huawei@n148 sed]$ sed '/^$\|^#/d' /etc/profile
+
+先将注释替换为空行，再执行删除空行，使用了-e
+[huawei@n148 sed]$ sed -e 's/#.*// ; /^$/ d' /etc/profile
+
+===================================
+
 删除空行
 [huawei@n148 reg]$ sed '/^$/d' 1.txt
 111
@@ -1195,7 +1320,7 @@ xxxxxx
 444
 555
 ```
-## 替换内容 s
+## 替换内容 s/
 ```
 将文件中的2替换为hello，默认只替换每行第一个2
 [huawei@n148 reg]$ sed 's/2/hello/' 1.txt
@@ -1224,6 +1349,18 @@ hellohellohello
 555
 ===================================
 
+将匹配“j... ”的替换成“Jason ”并打印
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n 's/J... /Jason /p' employee.txt
+101,Jason Doe,CEO
+105,Jason Miller,Sales Manager
+
+===================================
 将每行中所有匹配的2替换为hello，并将替换后的内容写入2.txt，这里仅打印了替换后的匹配行
 [huawei@n148 reg]$ sed -n 's/2/hello/gpw 2.txt' 1.txt	
 hellohellohello
@@ -1356,7 +1493,7 @@ hellohaha
 <104,Anand Ram,Developer>
 <105,Jane Miller,Sales Manager>
 ```
-## 打印匹配的行 n p
+## 打印匹配的行 -n p
 ```
 ===================================
 
@@ -1372,6 +1509,21 @@ hellohaha
 打印文件中的第三行内容
 [huawei@n148 sed]$ sed  -n '3p'  1.txt
 3.I am funning thanks
+===================================
+
+显示包含log并且log后面有内容的行，'/log: *./p'  “ *”匹配log:后面n个空格，“.”的作用是后接任意一个字符
+
+[huawei@n148 sed]$ cat log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+[huawei@n148 sed]$ sed -n '/log: *./p' log.txt
+log: input.txt
+log: testing resumed
+log:output created
+
 ===================================
 
 从第二行开始，每隔两行打印一行，波浪号后面的2表示步长
@@ -1401,6 +1553,23 @@ hellohaha
 3.I am funning thanks
 4.and you
 5.I am funning too
+===================================
+
+两种方式，打印匹配2、3、4的行
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n '/[234]/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+[huawei@n148 sed]$ sed -n '/[2-4]/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
 ===================================
 
 逐行读取文件，打印匹配you的行
@@ -1459,7 +1628,7 @@ hellohaha
 4.and you
 5.I am funning too
 ```
-## 打印行号 n p
+## 打印行号 -n p
 ```
 [huawei@n148 sed]$ cat 1.txt
 1.hello bob
@@ -1620,7 +1789,7 @@ xyz
 111
 333
 ```
-## 执行sed脚本 f
+## 执行sed脚本 -f
 把具体的sed命令放入文件中
 ```
 [huawei@n148 sed]$ cat test-script.sed
@@ -1630,26 +1799,172 @@ xyz
 [huawei@n148 sed]$ sed -n -f test-script.sed  /etc/passwd
 root:x:0:0:root:/root:/bin/bash
 nobody:x:99:99:Nobody:/:/sbin/nologin
+
+
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+[huawei@n148 sed]$ cat mycommands.sed
+s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1, \3/g
+s/^.*/<&>/
+s/Developer/IT Manager/
+s/Manager/Director/
+
+[huawei@n148 sed]$ sed -f mycommands.sed employee.txt
+<John Doe,101, CEO>
+<Jason Smith,102, IT Director>
+<Raj Reddy,103, Sysadmin>
+<Anand Ram,104, IT Director>
+<Jane Miller,105, Sales Director>
+
 ```
 
-## 多个命令 e
+## 多个命令 -e
 ```
-[huawei@n148 sed]$ sed -n -e'/^root/ p' -e'/^nobody/ p'  /etc/passwd;
+[huawei@n148 sed]$ sed -n -e '/^root/ p' -e '/^nobody/ p' -e '/^mail/ p' /etc/passwd
 root:x:0:0:root:/root:/bin/bash
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
 nobody:x:99:99:Nobody:/:/sbin/nologin
-```
-
-## 分组
 
 ```
-正则表达式\([^,]*\)匹配字符串从开头到第一个逗号之间的所有字符(并将其放入第一个分组中), replacement-string 中的\1 将替代匹配到的分组, g即是全局标志
 
+## 分组 ( )
+
+```
+[huawei@n148 sed]$ echo aabbccddeeffgghh|sed 's/^\(..\)\(..\)\(..\)\(..\).*$/\1:\2:\3:\4/'
+aa:bb:cc:dd
+
+其中s/是替换命令，^表示从一行的开头匹配  
+第一个\(..\)表示匹配任意2个字符，并且后面的\1，就是这次匹配的结果。
+对于字符串aabbccddeeffgghh而言，就是aa这2个字符
+同理，第二\(..\)匹配bb，对应\2
+第三\(..\)匹配cc，对应\3
+第四\(..\)匹配dd，对应\4
+剩下的eeffgghh匹配 .*$，其中.*表示匹配任意个字符，$匹配到末尾，这些字符串被抛弃
+aabbccddeeffgghh得到的结果就是aa:bb:cc:dd
+
+
+============================================================
+
+正则表达式[^,]*代表开头到第一个逗号之间的所有字符
+
+[huawei@n148 ~]$ echo 101,John Doe,CEO|sed 's/[^,]*/@@@/'
+@@@,John Doe,CEO
+
+============================================================
+
+正则表达式\([^,]*\)匹配字符串从开头到第一个逗号之间的所有字符(并将其放入第一个分组中), 后面的\1 将替代匹配到的分组, g即是全局标志
+
+只打印第一列
 [huawei@n148 sed]$ sed 's/\([^:]*\).*/\1/' /etc/passwd
 root
 bin
 daemon
+...
+
+============================================================
+
+最牛逼分组替换例子
+
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ cat mycommands.sed
+#按,分割  交换第一列和第二列
+s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1,\3/g
+#把整行内容放入<>中
+s/^.*/<&>/
+#把 Developer 替换为 IT Manager
+s/Developer/IT Manager/
+#把 Manager 替换为 Director
+s/Manager/Director/
+[huawei@n148 sed]$ sed -f mycommands.sed employee.txt
+<John Doe,101,CEO>
+<Jason Smith,102,IT Director>
+<Raj Reddy,103,Sysadmin>
+<Anand Ram,104,IT Director>
+<Jane Miller,105,Sales Director>
 
 ```
+## 自身原内容 &
+```
+[huawei@n148 sed]$ echo hello| sed 's/hello/(&)/'
+(hello)
+[huawei@n148 sed]$ echo hello| sed 's/[a-z]*/(&)/'
+(hello)
+[huawei@n148 sed]$ echo "hello world"| sed 's/[a-z]*/(&)/'
+(hello) world
+[huawei@n148 sed]$ echo "hello world"| sed 's/[a-z]*/(&)/g'
+(hello) (world)
+[huawei@n148 sed]$ echo hello| sed 's/[a-z]*/(&) world/g'
+(hello) world
+```
+
+## 直接执行sed文件
+```
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+[huawei@n148 sed]$ cat myscript.sed
+#!/bin/sed -f
+#交换第一列和第二列
+s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1, \3/g
+#把整行内容放入<>中
+s/^.*/<&>/
+#把 Developer 替换为 IT Manager
+s/Developer/IT Manager/
+#把 Manager 替换为 Director
+s/Manager/Director/
+
+给这个脚本加上可执行权限,然后直接在命令行调用它
+[huawei@n148 sed]$ chmod u+x myscript.sed
+[huawei@n148 sed]$ ./myscript.sed employee.txt
+<John Doe,101, CEO>
+<Jason Smith,102, IT Director>
+<Raj Reddy,103, Sysadmin>
+<Anand Ram,104, IT Director>
+<Jane Miller,105, Sales Director>
+
+==============================================
+[huawei@n148 sed]$ cat testscript.sed
+#!/bin/sed -nf
+/root/ p
+/nobody/ p
+/mail/ p
+[huawei@n148 sed]$ chmod u+x testscript.sed
+[huawei@n148 sed]$ ./testscript.sed /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+nfsnobody:x:65534:65534:Anonymous NFS User:/var/lib/nfs:/sbin/nologin
+```
+## 直接修改输入文件 -i
+为了修改输入文件，通常方法是把输出重定向到一个临时文件，然后重命名该临时文件
+```
+[huawei@n148 sed]$ sed 's/John/Johnny/' employee.txt > new-employee.txt
+[huawei@n148 sed]$ mv new-employee.txt employee.txt
+```
+在 sed 命令中使用-i 选项，使 sed 可以直接修改输入文件
+```
+[huawei@n148 sed]$ sed -i 's/John/Johnny/' employee.txt
+```
+在替换前备份employee.txt为employee.txtbak，然后再改employee.txt
+```
+[huawei@n148 sed]$ sed -ibak 's/John/Johnny/' employee.txt
+```
+
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
 ## 内建变量
