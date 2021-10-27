@@ -1103,9 +1103,9 @@ tetregex@163.cccom
 Stream Editor文本流编辑，sed是一个“非交互式的”面向字符流的编辑器。能同时处理多个文件多行的内容，可以不对原文件改动，把整个文件输入到屏幕,可以把只匹配到模式的内容输入到屏幕上。还可以对原文件改动，但是不会再屏幕上返回结果。
 https://www.cnblogs.com/ctaixw/p/5860221.html
 https://blog.csdn.net/wdz306ling/article/details/80087889  
-sed 绝不会修改原始文件 input-file,它只是将结果内容输出到标准输出设备。如果要保
+sed 默认不会修改原始文件，只是将结果内容输出到标准输出设备。如果要保
 持变更，应该使用重定向 > filename.txt
-
+sed 正常流程是读取数据、执行命令、打印输出、重复循环。
 ```
 sed中的编辑命令：
 i:插入  添加到匹配行的上一行
@@ -1118,112 +1118,337 @@ p:打印匹配行（和-n选项一起合用）
 n:输出  只打印模式匹配的行，否则会输出所有
 r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内容写入到文件
 ```
-## 插入 i、追加 a
+## 插入 i
+在指定位置之前插入行
 ```
-[huawei@n148 reg]$ cat 1.txt
-111
-222
-333
-444
-555
-===================================
+[huawei@n148 sed]$ cat employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-匹配指定行号
-[huawei@n148 reg]$ sed '3ixxxxxx' 1.txt
-111
-222
-xxxxxx
-333
-444
-555
-===================================
+在 employee.txt 的第 2 行之前插入一行:
+[huawei@n148 sed]$  sed '2 i 203,Jack Johnson,Engineer' employee.txt
+101,Johnny Doe,CEO
+203,Jack Johnson,Engineer
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-[huawei@n148 reg]$ sed '3axxxxxx' 1.txt
-111
-222
-333
-xxxxxx
-444
-555 
-===================================
+在 employee.txt 最后一行之前，插入一行
+[huawei@n148 sed]$ sed '$ i 108,Jack Johnson,Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+108,Jack Johnson,Engineer
+105,Jane Miller,Sales Manager
 
-匹配指定内容
-[huawei@n148 reg]$ sed '/222/ixxxxxx' 1.txt
-111
-xxxxxx
-222
-333
-444
-555
-===================================
-
-[huawei@n148 reg]$ sed '/222/axxxxxx' 1.txt
-111
-222
-xxxxxx
-333
-444
-555
-===================================
-
-匹配最末行
-[huawei@n148 reg]$ sed '$ixxxxxx' 1.txt
-111
-222
-333
-444
-xxxxxx
-555
-===================================
-
-[huawei@n148 reg]$ sed '$axxxxxx' 1.txt
-111
-222
-333
-444
-555
-xxxxxx
+在匹配 Jason 的行的前面插入两行:
+[huawei@n148 sed]$ sed '/Jason/i\
+203,Jack Johnson,Engineer\
+204,Mark Smith,Sales Engineer' employee.txt
+101,Johnny Doe,CEO
+203,Jack Johnson,Engineer
+204,Mark Smith,Sales Engineer
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 ```
-## 更改行为指定内容 c
+
+## 追加 a
+在指定位置的后面插入新行。
 ```
-===================================
-[huawei@n148 reg]$ cat 1.txt
-111 111
-222
-333  555
 
-444
-555  333
-===================================
+在第 2 行后面追加一行
+[huawei@n148 sed]$ sed '2 a 203,Jack Johnson,Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+203,Jack Johnson,Engineer
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-更改指定行
-[huawei@n148 reg]$ sed '1cxxxxxx' 1.txt
-xxxxxx
-222
-333  555
+在 employee.txt 文件结尾追加一行:
+[huawei@n148 sed]$ sed '$ a 106,Jack Johnson,Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+106,Jack Johnson,Engineer
 
-444
-555  333
-===================================
+在匹配 Jason 的行的后面追加两行:
+[huawei@n148 sed]$ sed '/Jason/a 203,Jack Johnson,Engineer\n204,Mark Smith,Sales Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+203,Jack Johnson,Engineer
+204,Mark Smith,Sales Engineer
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-更改指定内容所在行
-[huawei@n148 reg]$ sed '/333/cxxxxxx' 1.txt
-111 111
-222
-xxxxxx
+在匹配 Jason 的行的后面追加两行:
+[huawei@n148 sed]$ sed '/Jason/a\
+203,Jack Johnson,Engineer\
+204,Mark Smith,Sales Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+203,Jack Johnson,Engineer
+204,Mark Smith,Sales Engineer
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-444
-xxxxxx
-===================================
+```
+## 修改 c
+用新行取代旧行
+```
+
+用新数据取代第 2 行:
+这里命令 c 等价于替换：$ sed '2s/.*/202,Jack,Johnson,Engineer/' employee.txt
+[huawei@n148 sed]$ sed '2 c 202,Jack,Johnson,Engineer' employee.txt
+101,Johnny Doe,CEO
+202,Jack,Johnson,Engineer
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+
+用两行新数据取代匹配 Raj 的行:
+[huawei@n148 sed]$ sed '/Raj/c 203,Jack Johnson,Engineer\n204,Mark Smith,Sales Engineer' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+203,Jack Johnson,Engineer
+204,Mark Smith,Sales Engineer
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
 更改最末行
-[huawei@n148 reg]$ sed '$cxxxxxx' 1.txt
-111 111
-222
-333  555
+[huawei@n148 sed]$ sed '$ c end' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+end
+```
+## 组合a、i、c
+* a 在”Jason”后面追加”Jack Johnson”
+* i 在”Jason”前面插入”Mark Smith”
+* c 用”Joe Mason”替代”Jason”
+其实就是修改第2行，并在第二行前面加一行，后面加一行这么简单。。。
+```
+[huawei@n148 sed]$ cat employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-444
-xxxxxx
+[huawei@n148 sed]$ sed '/Jason/ {
+> a\
+> 204,Jack Johnson,Engineer
+> i\
+> 202,Mark Smith,Sales Engineer
+> c\
+> 203,Joe Mason,Sysadmin
+> }' employee.txt
+101,Johnny Doe,CEO
+202,Mark Smith,Sales Engineer
+203,Joe Mason,Sysadmin
+204,Jack Johnson,Engineer
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+```
+## 打印不可见字符、指定行的长度 l
+
+```
+可打印出\t与\n，但实验\t未显示，\n是$
+[huawei@n148 sed]$ sed -n 'l' tabfile.txt
+fname  First Name$
+lname  Last Name$
+mname  Middle Name$
+
+
+在第 n 个字符处使用一个不可见自动折行，但行尾会加\,且原始行尾加了$...
+[huawei@n148 sed]$ sed -n 'l 25' employee.txt
+101,Johnny Doe,CEO$
+102,Jason Smith,IT Manag\
+er$
+103,Raj Reddy,Sysadmin$
+104,Anand Ram,Developer$
+105,Jane Miller,Sales Ma\
+nager$
+```
+## 打印行号 =
+```
+打印所有行号:
+[huawei@n148 sed]$ sed '=' employee.txt
+1
+101,Johnny Doe,CEO
+2
+102,Jason Smith,IT Manager
+3
+103,Raj Reddy,Sysadmin
+4
+104,Anand Ram,Developer
+5
+105,Jane Miller,Sales Manager
+
+只打印 1,2,3 行的行号
+[huawei@n148 sed]$ sed '1,3 =' employee.txt
+1
+101,Johnny Doe,CEO
+2
+102,Jason Smith,IT Manager
+3
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+打印包含关键字”Jane”的行的行号，同时打印输入文件中的内容：
+[huawei@n148 sed]$ sed '/Jane/ =' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+5
+105,Jane Miller,Sales Manager
+
+
+打印匹配Raj的行的行号,即只显示行号但不显示行的内容
+[huawei@n148 sed]$ sed -n '/Raj/ =' employee.txt
+3
+
+打印匹配Raj的行的行号和内容（可用于查看日志中有error的行及其内容）
+[huawei@n148 sed]$ sed -n '/Raj/ {=;p}' employee.txt
+3
+103,Raj Reddy,Sysadmin
+
+打印文件的总行数:
+[huawei@n148 sed]$ sed -n '$ =' employee.txt
+5
+
+```
+
+## 大小写转换 y
+```
+把 a 换为 A，b 换为 B，c 换为 C，以此类推:
+[huawei@n148 sed]$ sed 'y/abcde/ABCDE/' employee.txt
+101,Johnny DoE,CEO
+102,JAson Smith,IT MAnAgEr
+103,RAj REDDy,SysADmin
+104,AnAnD RAm,DEvElopEr
+105,JAnE MillEr,SAlEs MAnAgEr
+
+把所有小写字符转换为大写字符:
+[huawei@n148 sed]$ sed 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' employee.txt
+101,JOHNNY DOE,CEO
+102,JASON SMITH,IT MANAGER
+103,RAJ REDDY,SYSADMIN
+104,ANAND RAM,DEVELOPER
+105,JANE MILLER,SALES MANAGER
+```
+## 操作多个文件
+```
+在/etc/passwd 中搜索 root 并打印出来：
+[huawei@n148 sed]$ sed -n '/root/ p' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+operator:x:11:0:operator:/root:/sbin/nologin
+
+在/etc/group 中搜索 root 并打印出来：
+[huawei@n148 sed]$ sed -n '/root/ p' /etc/group
+root:x:0:
+
+同时在/etc/passwd 和/etc/group 中搜索 root:
+[huawei@n148 sed]$ sed -n '/root/ p' /etc/passwd /etc/group
+root:x:0:0:root:/root:/bin/bash
+operator:x:11:0:operator:/root:/sbin/nologin
+root:x:0:
+```
+
+## 退出 q
+之前提到，正常的 sed 执行流程是：读取数据、执行命令、打印结果、重复循环。
+当 sed 遇到 q 命令，便立刻退出，当前循环中的后续命令不会被执行，也不会继续循环。
+注意：q 命令不能指定地址范围(或模式范围),只能用于单个地址(或单个模式)。
+```
+打印第 1 行后退出:
+[huawei@n148 sed]$ sed 'q' employee.txt
+101,Johnny Doe,CEO
+
+打印第 3 行后退出，即只打印前 3 行：
+[huawei@n148 sed]$ sed '3 q' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+
+打印所有行，直到遇到包含关键字 Manager 的行:
+[huawei@n148 sed]$ sed '/Manager/ q' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+
+```
+## 从文件读取数据 r
+从另外一个文件读取内容，并在指定的位置打印出来
+```
+[huawei@n148 sed]$ cat 1.txt
+123
+245
+789
+[huawei@n148 sed]$ cat 2.txt
+abc
+xyz
+qqw
+===================================
+
+将文件2.txt中的内容，读入1.txt中，会在1.txt中的每一行后都读入2.txt的内容
+[huawei@n148 sed]$ sed  'r 2.txt'  1.txt
+123
+abc
+xyz
+qqw
+245
+abc
+xyz
+qqw
+789
+abc
+xyz
+qqw
+===================================
+
+在1.txt的第2行之后插入文件2.txt的内容（可用于向文件中插入内容）
+[huawei@n148 sed]$ sed '2r 2.txt'  1.txt
+123
+245
+abc
+xyz
+qqw
+789
+===================================
+
+在匹配245的行之后插入文件2.txt的内容，如果1.txt中有多行匹配456则在每一行之后都会插入
+[huawei@n148 sed]$ sed  '/245/r   2.txt'   1.txt
+123
+245
+abc
+xyz
+qqw
+789
+===================================
+
+打印1.txt后打印2
+[huawei@n148 sed]$ sed  '$r  2.txt'   1.txt
+123
+245
+789
+abc
+xyz
+qqw
 ```
 ## 删除行 d
 ```
@@ -1493,6 +1718,139 @@ hellohaha
 <104,Anand Ram,Developer>
 <105,Jane Miller,Sales Manager>
 ```
+## 屏蔽sed默认输出，选项 -n
+也可以使用—quiet,或者—silent 来代替-n，它们的作用是相同的
+```
+[huawei@n148 sed]$ sed 'p' employee.txt
+101,Johnny Doe,CEO
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+105,Jane Miller,Sales Manager
+
+[huawei@n148 sed]$ sed -n 'p' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+```
+## 执行sed脚本，选项 -f
+把具体的sed命令放入文件中然后使用-f 选项来调用，也可以使用—file 来代替-f
+```
+[huawei@n148 sed]$ cat test-script.sed
+/^root/ p
+/^nobody/ p
+
+[huawei@n148 sed]$ sed -n -f test-script.sed  /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+nobody:x:99:99:Nobody:/:/sbin/nologin
+
+
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+[huawei@n148 sed]$ cat mycommands.sed
+s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1, \3/g
+s/^.*/<&>/
+s/Developer/IT Manager/
+s/Manager/Director/
+
+[huawei@n148 sed]$ sed -f mycommands.sed employee.txt
+<John Doe,101, CEO>
+<Jason Smith,102, IT Director>
+<Raj Reddy,103, Sysadmin>
+<Anand Ram,104, IT Director>
+<Jane Miller,105, Sales Director>
+
+```
+## 执行多个命令，选项 -e
+也可以使用—expression 来代替。
+```
+[huawei@n148 sed]$ sed -n -e '/^root/ p' -e '/^nobody/ p' -e '/^mail/ p' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+```
+## 直接修改输入文件，选项 -i
+为了修改输入文件，通常方法是把输出重定向到一个临时文件，然后重命名该临时文件。也可以使用--in-place 来代替-i:
+```
+[huawei@n148 sed]$ sed 's/John/Johnny/' employee.txt > new-employee.txt
+[huawei@n148 sed]$ mv new-employee.txt employee.txt
+```
+在 sed 命令中使用-i 选项，使 sed 可以直接修改输入文件
+```
+[huawei@n148 sed]$ sed -i 's/John/Johnny/' employee.txt
+```
+在替换前备份employee.txt为employee.txtbak，然后再改employee.txt。下面的命令是等价的
+```
+[huawei@n148 sed]$ sed -ibak 's/John/Johnny/' employee.txt
+[huawei@n148 sed]$ sed --in-place=bak 's/John/Johnny/' employee.txt
+```
+## 保持文件所有者不变，选项 -c
+此未测试
+该选项应和-i 配合使用。使用-i 时，通常在命令执行完成后，sed 使用临时文件来保持更改
+后的内容，然后把该临时文件重命名为输入文件。但这样会改变文件的所有者(奇怪的是我
+的测试结果是它不会改变文件所有者)，配合 c 选项，可以保持文件所有者不变。也可以使
+用--copy 来代替。
+
+```
+下面的命令是等价的:
+sed -ibak -c ‘s/John/Johnny/’ employee.txt
+sed --in-place=bak --copy ‘s/John/Johnny/’ employee.txt
+```
+## 指定行的长度，选项 -l
+与命令l的效果类似
+```
+[huawei@n148 sed]$ sed -n 'l 20' employee.txt
+101,Johnnyny Doe,CE\
+O$
+102,Jason Smith,IT \
+Manager$
+103,Raj Reddy,Sysad\
+min$
+104,Anand Ram,Devel\
+oper$
+105,Jane Miller,Sal\
+es Manager$
+[huawei@n148 sed]$ sed -n -l 20 'l' employee.txt
+101,Johnnyny Doe,CE\
+O$
+102,Jason Smith,IT \
+Manager$
+103,Raj Reddy,Sysad\
+min$
+104,Anand Ram,Devel\
+oper$
+105,Jane Miller,Sal\
+es Manager$
+
+```
+## 打印模式空间 n
+命令 n 打印当前模式空间的内容，然后从输入文件中读取下一行。如果在命令执行过程中遇到 n，那么它会改变正常的执行流程。命令 n 可以改变这个流程，它打印当前模式空间的内容，然后清除模式空间，读取下一行进来，然后继续执行后面的命令。
+
+```
+打印每一行在模式空间中的内容：
+[huawei@n148 sed]$ sed n employee.txt
+101,Johnnyny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+如果使用了-n 选项，将没有任何输出：
+$ sed -n n employee.txt
+
+```
 ## 打印匹配的行 -n p
 ```
 ===================================
@@ -1628,90 +1986,10 @@ log:output created
 4.and you
 5.I am funning too
 ```
-## 打印行号 -n p
-```
-[huawei@n148 sed]$ cat 1.txt
-1.hello bob
-2.how are you
-3.I am funning thanks
-4.and you
-5.I am funning too
-6.is you error
-7.what is rong with you
-===================================
 
-打印1.txt文件最后一行的行号（即文件有多少行，和wc -l 功能类似）
-[huawei@n148 sed]$ sed  -n "$="   1.txt
-7
-===================================
 
-打印匹配error的行的行号
-[huawei@n148 sed]$ sed  -n '/error/='  1.txt
-6
-===================================
 
-打印匹配error的行的行号和内容（可用于查看日志中有error的行及其内容）
-[huawei@n148 sed]$ sed  -n '/error/{=;p}'   1.txt
-6
-6.is you error
-```
-## 读取文件 r
-```
-[huawei@n148 sed]$ cat 1.txt
-123
-245
-789
-[huawei@n148 sed]$ cat 2.txt
-abc
-xyz
-qqw
-===================================
 
-将文件2.txt中的内容，读入1.txt中，会在1.txt中的每一行后都读入2.txt的内容
-[huawei@n148 sed]$ sed  'r 2.txt'  1.txt
-123
-abc
-xyz
-qqw
-245
-abc
-xyz
-qqw
-789
-abc
-xyz
-qqw
-===================================
-
-在1.txt的第2行之后插入文件2.txt的内容（可用于向文件中插入内容）
-[huawei@n148 sed]$ sed '2r 2.txt'  1.txt
-123
-245
-abc
-xyz
-qqw
-789
-===================================
-
-在匹配245的行之后插入文件2.txt的内容，如果1.txt中有多行匹配456则在每一行之后都会插入
-[huawei@n148 sed]$ sed  '/245/r   2.txt'   1.txt
-123
-245
-abc
-xyz
-qqw
-789
-===================================
-
-在1.txt的最后一行插入2.txt的内容
-[huawei@n148 sed]$ sed  '$r  2.txt'   1.txt
-123
-245
-789
-abc
-xyz
-qqw
-```
 ## 写入文件 w
 ```
 
@@ -1789,48 +2067,9 @@ xyz
 111
 333
 ```
-## 执行sed脚本 -f
-把具体的sed命令放入文件中
-```
-[huawei@n148 sed]$ cat test-script.sed
-/^root/ p
-/^nobody/ p
-
-[huawei@n148 sed]$ sed -n -f test-script.sed  /etc/passwd
-root:x:0:0:root:/root:/bin/bash
-nobody:x:99:99:Nobody:/:/sbin/nologin
 
 
-[huawei@n148 sed]$ cat employee.txt
-101,John Doe,CEO
-102,Jason Smith,IT Manager
-103,Raj Reddy,Sysadmin
-104,Anand Ram,Developer
-105,Jane Miller,Sales Manager
 
-[huawei@n148 sed]$ cat mycommands.sed
-s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1, \3/g
-s/^.*/<&>/
-s/Developer/IT Manager/
-s/Manager/Director/
-
-[huawei@n148 sed]$ sed -f mycommands.sed employee.txt
-<John Doe,101, CEO>
-<Jason Smith,102, IT Director>
-<Raj Reddy,103, Sysadmin>
-<Anand Ram,104, IT Director>
-<Jane Miller,105, Sales Director>
-
-```
-
-## 多个命令 -e
-```
-[huawei@n148 sed]$ sed -n -e '/^root/ p' -e '/^nobody/ p' -e '/^mail/ p' /etc/passwd
-root:x:0:0:root:/root:/bin/bash
-mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
-nobody:x:99:99:Nobody:/:/sbin/nologin
-
-```
 
 ## 分组 ( )
 
@@ -1950,21 +2189,71 @@ operator:x:11:0:operator:/root:/sbin/nologin
 nobody:x:99:99:Nobody:/:/sbin/nologin
 nfsnobody:x:65534:65534:Anonymous NFS User:/var/lib/nfs:/sbin/nologin
 ```
-## 直接修改输入文件 -i
-为了修改输入文件，通常方法是把输出重定向到一个临时文件，然后重命名该临时文件
-```
-[huawei@n148 sed]$ sed 's/John/Johnny/' employee.txt > new-employee.txt
-[huawei@n148 sed]$ mv new-employee.txt employee.txt
-```
-在 sed 命令中使用-i 选项，使 sed 可以直接修改输入文件
-```
-[huawei@n148 sed]$ sed -i 's/John/Johnny/' employee.txt
-```
-在替换前备份employee.txt为employee.txtbak，然后再改employee.txt
-```
-[huawei@n148 sed]$ sed -ibak 's/John/Johnny/' employee.txt
-```
 
+## sed模拟cat
+```
+[huawei@n148 sed]$ cat employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed 'N' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed 'n' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n 'p' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed 's/JUNK/&/ p' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+```
+## sed模拟grep
+```
+[huawei@n148 sed]$ grep Jane employee.txt
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n 's/Jane/&/ p' employee.txt
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n '/Jane/ p' employee.txt
+105,Jane Miller,Sales Manager
+
+
+
+grep –v (打印不匹配的行):
+[huawei@n148 sed]$ grep -v Jane employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+
+[huawei@n148 sed]$ sed -n '/Jane/ !p' employee.txt
+101,Johnny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+```
+## sed模拟head
+```
+[huawei@n148 sed]$ head -10 /etc/passwd
+[huawei@n148 sed]$ sed '11,$ d' /etc/passwd
+[huawei@n148 sed]$ sed -n '1,10 p' /etc/passwd
+[huawei@n148 sed]$ sed '10 q' /etc/passwd
+```
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
 ## 内建变量
