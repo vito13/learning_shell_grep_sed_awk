@@ -1858,36 +1858,84 @@ xyz
 qqw
 ```
 
-## 替换内容 s
-sed 只在模式空间中执行替换命令，然后输出模式空间的内容。
+## 替换 s
+流编辑器中最强大的功能就是替换substitute。原始输入文件不会被修改，sed 只在模式空间中执行替换命令，然后输出模式空间的内容。
+
+语法
+```
+sed ‘[address-range|pattern-range] s/original-string/replacement-string/[substitute-flags]’ input file
+```
+上面提到的语法为：
+* address-range 或 pattern-range(即地址范围和模式范围)是可选的。如果没有指
+定，那么 sed 将在所有行上进行替换。
+* s 即执行替换命令 substitute
+* original-string 是被 sed 搜索然后被替换的字符串，它可以是一个正则表达式
+* replacement-string 替换后的字符串
+* substitute-flags 是可选的，下面会具体解释
+
 
 ```
 将文件中的2替换为hello，默认只替换每行第一个2
+
 [huawei@n148 reg]$ sed 's/2/hello/' 1.txt
 111
 hello22
 333
 444
 555
-===================================
 
-将文本中所有的2都替换为hello
+只把包含 Sales 的行中的 Manager 替换为 Directo,注意：本例由于使用了地址范围限制，所以只有一个 Manager 被替换了
+
+[huawei@n148 sed]$ sed '/Sales/s/Manager/Director/' employee.txt
+101,Johnnyny Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Director
+```
+
+全局标志 g
+```
+g 代表全局(global)。 默认情况下，sed 至会替换每行中第一次出现的 original-string。如果你要替换每行中出现的所有 original-string,就需要使用 g。将文本中所有的2都替换为hello。会在所有行上替换，因为没有指定地址范围。
+
 [huawei@n148 reg]$ sed 's/2/hello/g' 1.txt
 111
 hellohellohello
 333
 444
 555
-===================================
+```
+数字标志 (1,2,3 ….)
 
+```
+使用数字可以指定 original-string 出现的次序。只有第 n 次出现的 original-string 才会触发替换。每行的数字从 1 开始，最大为 512。
 将每行中第3个匹配的2替换为hello
+
 [huawei@n148 reg]$ sed 's/2/hello/3' 1.txt
 111
 22hello
 333
 444
 555
-===================================
+```
+打印标志 p(print)
+```
+命令 p 代表 print。当替换操作完成后，打印替换后的行。与其他打印命令类似，sed 中比较有用的方法是和-n 一起使用以抑制默认的打印操作。
+
+只打印替换后的行：
+[huawei@n148 sed]$ sed -n 's/John/Johnny/p' employee.txt
+101,Johnnynyny Doe,CEO
+
+
+把每行中第二次出现的 locate 替换为 find 并打印出来：
+[huawei@n148 sed]$ cat substitute-locate.txt
+locate command is used to locate files
+locate command uses database to locate files
+locate command can also use regex for searching
+[huawei@n148 sed]$ sed -n 's/locate/find/2p' substitute-locate.txt
+locate command is used to find files
+locate command uses database to find files
+
 
 将匹配“j... ”的替换成“Jason ”并打印
 [huawei@n148 sed]$ cat employee.txt
@@ -1899,15 +1947,103 @@ hellohellohello
 [huawei@n148 sed]$ sed -n 's/J... /Jason /p' employee.txt
 101,Jason Doe,CEO
 105,Jason Miller,Sales Manager
+```
+写标志 w
 
-===================================
+```
+标志 w 代表 write。当替换操作执行成功后，它把替换后的结果保存的文件中。多数人更倾向于使用 p 打印内容，然后重定向到文件中。为了对 sed 标志有个完整的描述，在这里把这个标志也提出来了。
+
+
+只把替换后的内容写到 output.txt 中,和之前使用的命令 p 一样，使用 w 会把替换后的内容保存到文件 output.txt 中。
+[huawei@n148 sed]$ sed -n 's/John/Johnny/w output.txt' employee.txt
+[huawei@n148 sed]$ cat output.txt
+101,Johnnynyny Doe,CEO
+
+
+把每行第二次出现的 locate 替换为 find，把替换的结果保存到文件中，同时显示输入文件所有内容：
+[huawei@n148 sed]$ sed 's/locate/find/2w output.txt' substitute-locate.txt
+locate command is used to find files
+locate command uses database to find files
+locate command can also use regex for searching
+[huawei@n148 sed]$ cat output.txt
+locate command is used to find files
+locate command uses database to find files
+
+
 将每行中所有匹配的2替换为hello，并将替换后的内容写入2.txt，这里仅打印了替换后的匹配行
 [huawei@n148 reg]$ sed -n 's/2/hello/gpw 2.txt' 1.txt	
 hellohellohello
 [huawei@n148 reg]$ cat 2.txt
 hellohellohello
-===================================
+```
+忽略大小写标志 i (ignore)
+```
+替换标志 i 代表忽略大小写。可以使用 i 来以小写字符的模式匹配 original-string。该标志只有 GNU Sed 中才可使用。
+本地测试不起作用 sed 's/john/Johnny/i' employee.txt
+```
 
+执行命令标志 e (excuate)
+```
+替换标志 e 代表执行(execute)。该标志可以将模式空间中的任何内容当做 shell 命令执行，并把命令执行的结果返回到模式空间。该标志只有 GNU Sed 中才可使用。
+
+[huawei@n148 sed]$ cat files.txt
+/etc/passwd
+/etc/group
+
+在 files.txt 文件中的每行前面添加 ls –l 并打击结果：
+[huawei@n148 sed]$ sed 's/^/ls -l/' files.txt
+ls -l/etc/passwd
+ls -l/etc/group
+
+
+在 files.txt 文件中的每行前面添加 ls –l 并把结果作为命令执行:
+[huawei@n148 sed]$ sed 's/^/ls -l /e' files.txt
+-rw-r--r-- 1 root root 2650 Sep 24 15:08 /etc/passwd
+-rw-r--r-- 1 root root 1115 Sep 24 15:08 /etc/group
+
+```
+替换命令分界符，即替换掉/
+```
+默认的分界符/,即 s/original-string/replacement-string/g,如果在original-string 或 replacement-string 中有/,那么需要使用反斜杠\来转义
+
+如把/usr/local/bin 替换为/usr/bin
+[huawei@n148 sed]$ cat path.txt
+reading /usr/local/bin directory
+[huawei@n148 sed]$ sed 's/\/usr\/local\/bin/\/usr\/bin/' path.txt
+reading /usr/bin directory
+如果要替换一个很长的路径，每个/前面都使用\转义，会显得很混乱。以使用任何一个字符作为 sed 替换命令的分界符，如 | 或 ^ 或 @ 或者 !。
+
+
+[huawei@n148 sed]$ sed 's|/usr/local/bin|/usr/bin|' path.txt
+reading /usr/bin directory
+[huawei@n148 sed]$ sed 's^/usr/local/bin^/usr/bin^' path.txt
+reading /usr/bin directory
+[huawei@n148 sed]$ sed 's@/usr/local/bin@/usr/bin@' path.txt
+reading /usr/bin directory
+[huawei@n148 sed]$ sed 's!/usr/local/bin!/usr/bin!' path.txt
+reading /usr/bin directory
+
+```
+
+单行内容上执行多个命令
+```
+sed 执行的过程是读取内容、执行命令、打印结果、重复循环。其中执行命令部分，可以由多个命令执行，sed 将一个一个地依次执行它们。例如，你有两个命令，sed 将在模式空间中执行第一个命令，然后执行第二个命令。如果第一个命令改变了模式空间的内容，第二个命令会在改变后的模式空间上执行(此时模式空间的内容已经不是最开始读取进来的内容了)。
+
+把 Developer 替换为 IT Manager,然后把 Manager 替换为 Director:
+2种样式均测试失败
+[huawei@n148 sed]$ sed '{
+> s/Developer/IT Manager/
+> s/Manager/Director/
+> }'employee.txt
+sed: -e expression #1, char 48: extra characters after command
+
+
+[huawei@n148 sed]$ sed 's/Developer/IT Manager/ s/Manager/Director/' employee.txt
+sed: -e expression #1, char 25: unknown option to `s'
+
+```
+其他高级些的案例
+```
 匹配有#号的行，替换匹配行中逗号后的所有内容为空  (,.*)表示逗号后的所有内容
 [huawei@n148 reg]$ cat 1.txt
 #abc,123
@@ -2166,19 +2302,87 @@ es Manager$
 $ sed -n n employee.txt
 
 ```
-## 打印匹配的行 -n p
-```
+## 分组替换(单个分组)
+跟在正则表达式中一样，sed 中也可以使用分组。分组以\(开始，以\)结束。分组可以用在
+回溯引用中。回溯引用即重新使用分组所选择的部分正则表达式，在 sed 替换命令的 replacement-string中和正则表达式中，都可以使用回溯引用。
 
 ```
+下例中正则表达式\([^,]*\)匹配字符串从开头到第一个逗号之间的所有字符(并将其放入第一个分组中)，replacement-string 中的\1 将替代匹配到的分组，g 即是全局标志
+
+[huawei@n148 sed]$ sed 's/\([^,]*\).*/\1/g' employee.txt
+101
+102
+103
+104
+105
 
 
 
+显示/etc/passwd 的第一列，即用户名
+[huawei@n148 sed]$ sed 's/\([^:]*\).*/\1/' /etc/passwd
+root
+bin
+daemon
+...
 
 
+如果单词第一个字符为大写，那么会给这个大写字符加上()
+[huawei@n148 sed]$ echo "The Geek Stuff"|sed 's/\(\b[A-Z]\)/\(\1\)/g'
+(T)he (G)eek (S)tuff
 
-## 分组 ( )
 
+格式化数字，增加其可读性:
+[huawei@n148 sed]$ cat numbers.txt
+1
+12
+123
+1234
+12345
+123456
+[huawei@n148 sed]$ sed 's/\(^\|[^0-9.]\)\([0-9]\+\)\([0-9]\{3\}\)/\1\2,\3/g' numbers.txt
+1
+12
+123
+1,234
+12,345
+123,456
 ```
+
+
+## 分组替换(多个分组)
+可以使用多个\(和\)划分多个分组，使用多个分组时，需要在 replacement-string 中使用\n来指定第 n 个分组，注意：sed 最多能处理 9 个分组，分别用\1 至\9 表示。
+```
+
+只打印第一列(雇员 ID)和第三列(雇员职位):
+[huawei@n148 sed]$ sed 's/^\([^,]*\),\([^,]*\),\([^,]*\)/\1,\3/' employee.txt
+101,CEO
+102,IT Manager
+103,Sysadmin
+104,Developer
+105,Sales Manager
+
+上面例子original-string 中，划分了 3 个分组，以逗号分隔。
+([^,]*\) 第一个分组，匹配雇员 ID
+，为字段分隔符
+([^,]*\) 第二个分组，匹配雇员姓名
+，为字段分隔符
+([^,]*\) 第三个分组，匹配雇员职位
+，为字段分隔符，上面的例子演示了如何使用分组
+\1 代表第一个分组(雇员 ID)
+，出现在第一个分组之后的逗号
+\3 代表第二个分组(雇员职位)
+============================================================
+
+
+交换第一列(雇员 ID)和第二列(雇员姓名)：
+[huawei@n148 sed]$ sed 's/^\([^,]*\),\([^,]*\),\([^,]*\)/\2,\1,\3/' employee.txt
+Johnnyny Doe,101,CEO
+Jason Smith,102,IT Manager
+Raj Reddy,103,Sysadmin
+Anand Ram,104,Developer
+Jane Miller,105,Sales Manager
+============================================================
+
 [huawei@n148 sed]$ echo aabbccddeeffgghh|sed 's/^\(..\)\(..\)\(..\)\(..\).*$/\1:\2:\3:\4/'
 aa:bb:cc:dd
 
@@ -2198,17 +2402,6 @@ aabbccddeeffgghh得到的结果就是aa:bb:cc:dd
 
 [huawei@n148 ~]$ echo 101,John Doe,CEO|sed 's/[^,]*/@@@/'
 @@@,John Doe,CEO
-
-============================================================
-
-正则表达式\([^,]*\)匹配字符串从开头到第一个逗号之间的所有字符(并将其放入第一个分组中), 后面的\1 将替代匹配到的分组, g即是全局标志
-
-只打印第一列
-[huawei@n148 sed]$ sed 's/\([^:]*\).*/\1/' /etc/passwd
-root
-bin
-daemon
-...
 
 ============================================================
 
@@ -2237,8 +2430,11 @@ s/Manager/Director/
 <Jane Miller,105,Sales Director>
 
 ```
-## 自身原内容 &
+## 获取匹配到的模式 &
+
 ```
+当在 replacement-string 中使用&时，它会被替换成匹配到的 original-string 或正则表达式，这是个很有用的东西。
+
 [huawei@n148 sed]$ echo hello| sed 's/hello/(&)/'
 (hello)
 [huawei@n148 sed]$ echo hello| sed 's/[a-z]*/(&)/'
@@ -2249,6 +2445,24 @@ s/Manager/Director/
 (hello) (world)
 [huawei@n148 sed]$ echo hello| sed 's/[a-z]*/(&) world/g'
 (hello) world
+
+
+给雇员 ID(即第一列的 3 个数字)加上[ ],如 101 改成[101]
+[huawei@n148 sed]$ sed 's/^[0-9][0-9][0-9]/[&]/g' employee.txt
+[101],Johnnyny Doe,CEO
+[102],Jason Smith,IT Manager
+[103],Raj Reddy,Sysadmin
+[104],Anand Ram,Developer
+[105],Jane Miller,Sales Manager
+
+把每一行放进< >中：
+[huawei@n148 sed]$ sed 's/^.*/<&>/' employee.txt
+<101,Johnnyny Doe,CEO>
+<102,Jason Smith,IT Manager>
+<103,Raj Reddy,Sysadmin>
+<104,Anand Ram,Developer>
+<105,Jane Miller,Sales Manager>
+
 ```
 
 ## 直接执行sed文件
