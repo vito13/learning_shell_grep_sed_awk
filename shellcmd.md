@@ -497,6 +497,36 @@ asdfasdfasdfasdf@
 zsything@yeah.net
 
 ```
+## 正则匹配行首、行尾、指定行内容、空行
+```
+[huawei@n148 reg]$ cat regex
+hello world
+hello
+
+hi hello
+
+hello ,zsy
+
+[huawei@n148 reg]$ grep 'hello' regex
+hello world
+hello
+hi hello
+hello ,zsy
+[huawei@n148 reg]$ grep '^hello' regex
+hello world
+hello
+hello ,zsy
+[huawei@n148 reg]$ grep 'hello$' regex
+hello
+hi hello
+[huawei@n148 reg]$ grep '^hello$' regex
+hello
+[huawei@n148 reg]$ grep '^$' regex
+
+
+
+[huawei@n148 reg]$
+```
 # 正则 Regular Expression
 正则表达式，又称 规则表达式。正则表达式的英语原文为：Regular Expression，常简写为regex、regexp或RE，正则表达式是计算机科学的一个概念。正则表达式通常被用来检索、替换那些符合某个模式(规则)的文本。  
 ```
@@ -565,78 +595,267 @@ $：表示锚定行尾，此字符前面的任意内容必须出现在行尾，�
 \2 表示引用整个表达式中第2个分组中的正则匹配到的结果。
 ```
 
+
+## 行首^	行尾$
+^ 匹配每一行的开头。只有^出现在正则表达式开头时，它才匹配行的开头  
+$ 匹配行的结尾。
+
 ```
-[huawei@n148 reg]$ cat regex
-hello world
-hello
+[huawei@n148 sed]$ sed -n '/^103/ p' employee.txt	匹配103开头的
+103,Raj Reddy,Sysadmin
+[huawei@n148 sed]$ sed -n '/r$/ p' employee.txt		匹配r结尾的
+102,Jason Smith,IT Manager
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-hi hello
+```
+## 任意单个 .  任意n个 *
 
-hello ,zsy
-
-[huawei@n148 reg]$ grep 'hello' regex
-hello world
-hello
-hi hello
-hello ,zsy
-[huawei@n148 reg]$ grep '^hello' regex
-hello world
-hello
-hello ,zsy
-[huawei@n148 reg]$ grep 'hello$' regex
-hello
-hi hello
-[huawei@n148 reg]$ grep '^hello$' regex
-hello
-[huawei@n148 reg]$ grep '^$' regex
+```
+. 匹配除换行符之外的任意单个字符
+* 匹配 0 个或多个其前面的字符。如：1* 匹配 0 个或多个 1
+使用 .* 表示任意长度的任意字符，与通配符中的*所表达的意思一样
 
 
+匹配ee开头后跟一个任意字符
+[huawei@n148 reg]$ grep -n "ee." regex.txt 
+9:ef eef eeef
 
-[huawei@n148 reg]$
+匹配ee开头后跟儿个任意字符
+[huawei@n148 reg]$ grep -n "ee.." regex.txt 
+9:ef eef eeef
+
+把 employee.txt 中每行最后两个字符替换为”,Not Defined”:
+[huawei@n148 sed]$ sed -n 's/..$/,Not Defined/ p' employee.txt
+101,John Doe,C,Not Defined
+102,Jason Smith,IT Manag,Not Defined
+103,Raj Reddy,Sysadm,Not Defined
+104,Anand Ram,Develop,Not Defined
+105,Jane Miller,Sales Manag,Not Defined
+
+
+”J… “同时匹配 employee.txt 文件中的”John “和”Jane “,替换结果如下
+[huawei@n148 sed]$ sed -n 's/J... /Jason /p' employee.txt
+101,Jason Doe,CEO
+105,Jason Miller,Sales Manager
+
+匹配n次e后接f的
+[huawei@n148 reg]$ grep -n "e*f" regex.txt
+9:ef eef eeef
+
+匹配n次d的，包含0次所以匹配了所有行
+[huawei@n148 reg]$ grep -n "d*" regex.txt
+1:a a
+2:aa
+3:a aa
+4:bb
+5:bbb
+6:c cc ccc
+7:dddd d dd ddd
+8:ab abc abcc
+9:ef eef eeef
+
+匹配a开头的行
+[huawei@n148 reg]$ grep -n "a.*" regex.txt
+1:a a
+2:aa
+3:a aa
+8:ab abc abcc
+
+
+显示包含 log:并且 log 后面有信息的行，log 和信息之间可能有空格。正则里*后面的点.是必需的，如果没有，sed 只会打印所有包含 log 的行
+[huawei@n148 sed]$ cat log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+[huawei@n148 sed]$ sed -n '/log: *./p' log.txt
+log: input.txt
+log: testing resumed
+log:output created
+```
+## 匹配0次或1次 ?   匹配1次或多次 +
+```
+\+ 匹配一次或多次它前面的字符
+\? 匹配 0 次或一次它前面的字符
+
+[huawei@n148 sed]$ cat log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+
+显示包含 log:并且 log:后面有一个或多个空格的所有行。本例既没有匹配只包含 log:的行，也没有匹配 log:output craeted 这一行，因为 log:后面没有空格。
+[huawei@n148 sed]$ sed -n '/log: \+/ p' log.txt
+log: input.txt
+log: testing resumed
+
+
+显示包含 log:并且 log:后面有0个或1个空格的所有行：
+[huawei@n148 sed]$ sed -n '/log: \?/ p' log.txt
+log: input.txt
+log:
+log: testing resumed
+log:
+log:output created
+
+```
+## 转义符号 \
+如果要在正则表达式中搜寻特殊字符(如:*,.)，必需使用\来转义它们。
+```
+转义这几个:  \.  \*  \?   \+  \\
+转义\就要用到单引号；
+转义其他符号就要用到双引号；
+
+[huawei@n148 sed]$ sed -n '/127\.0\.0\.1/ p' /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+
+[huawei@n148 reg]$ cat reg11
+bae
+a1#
+ddd
+a-!
+ccc
+a..
+aaaa
+a*
+ab
+a
+ab?
+ab+
+a\
+abc
+a\\
+a\a
+
+[huawei@n148 reg]$ grep "a\.\." reg11	仅匹配a..
+a..
+[huawei@n148 reg]$ grep "a\*" reg11		仅匹配a*
+a*
+[huawei@n148 reg]$ grep "ab?" reg11		仅匹配ab?
+ab?
+[huawei@n148 reg]$ grep "ab+" reg11		仅匹配ab+
+ab+
+[huawei@n148 reg]$ grep 'a\\' reg11		仅匹配a\
+a\
+a\\
+a\a
+[huawei@n148 reg]$ grep 'a\\\\' reg11	仅匹配a\\
+a\\
+```
+## 匹配字符集 [  ]
+```
+[ ] 表示匹配指定范围内的任意单个字符，就是字符与方括号[ ]内的任意一个字符相同，就可以被匹配到。
+[^ ]表示匹配指定范围外的任意单个字符，注意，它与[ ]的含义正好相反。
+[^0-9]与[^[:digit:]]等效
+[^a-z]与[^[:lower:]]等效
+[^A-Z]与[^[:upper:]]等效
+[^a-zA-Z]与[^[:alpha:]]等效
+[^a-zA-Z0-9]与[^[:alnum:]]等效
+
+
+匹配包含 2、3 或者 4 的行。可以使用连接符-指定一个字符范围。如[0123456789]可以用[0-9]表示，字母可以用[a-z],[A-Z]表示
+[huawei@n148 sed]$ sed -n '/[234]/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+(另一种方式):
+[huawei@n148 sed]$ sed -n '/[2-4]/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+
+
+[huawei@n148 reg]$ cat reg2
+bc
+bd
+be
+bf
+bg
+
+[huawei@n148 reg]$ grep -n "b[ceg]" reg2
+1:bc
+3:be
+5:bg
+
+
+
+[huawei@n148 reg]$ cat reg3
+c3
+cB
+cC
+cd
+cE
+c$
+c#
+[huawei@n148 reg]$ grep -n "c[Bd#3]" reg3
+1:c3
+2:cB
+4:cd
+7:c#
+[huawei@n148 reg]$ grep -n "c[^3BCDE]" reg3
+4:cd
+6:c$
+7:c#
+[huawei@n148 reg]$ grep -n "c[^0-9]" reg3 匹配e后跟字符不是数字的
+2:cB
+3:cC
+4:cd
+5:cE
+6:c$
+7:c#
 ```
 
-## 词首\b 词尾\b 非词首\B 非词尾\B
-非词首非词尾即一个字符串里包含了要找的子串
+## 或操作符 |
+管道符号|用来匹配两边任意一个子表达式。子表达式 1|子表达式 2 匹配子表达式 1 或者子表达式 2
 ```
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
 
-[huawei@n148 sed]$ cat words.txt
-word matching using: the
-word matching using: thethe
-word matching using: they
+打印包含 101 或者包含 102 的行。需要注意，| 需要用\转义。
+[huawei@n148 sed]$ sed -n '/101\|102/ p' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
 
-匹配包含 the 作为整个单词的行：
-[huawei@n148 sed]$ sed -n '/\bthe\b/ p' words.txt
-word matching using: the
-
-匹配所有以 the 开头的单词:
-[huawei@n148 sed]$ sed -n '/\bthe/ p' words.txt
-word matching using: the
-word matching using: thethe
-word matching using: they
+打印包含数字 2~3 或者包含 105 的行：
+[huawei@n148 sed]$ sed -n '/[2-3]\|105/ p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+105,Jane Miller,Sales Manager
 
 
-[huawei@n148 reg]$ cat -n REG
-     1  abchello world
-     2  abc helloabc abc
-     3  abc abcabchelloabc abc
-     4  abchello helloabc hello ahelloa
-[huawei@n148 reg]$ grep "\bhello" REG
-abc helloabc abc
-abchello helloabc hello ahelloa
-[huawei@n148 reg]$ grep "hello\b" REG
-abchello world
-abchello helloabc hello ahelloa
-[huawei@n148 reg]$ grep "\bhello\b" REG
-abchello helloabc hello ahelloa
-[huawei@n148 reg]$ grep "\Bhello" REG
-abchello world
-abc abcabchelloabc abc
-abchello helloabc hello ahelloa
-[huawei@n148 reg]$
+[huawei@n148 reg]$ cat mail
+zsything@zsything.net
+1@2
+zhuangshuangyin@szything.net
+aaa.org
+tetregex@163.com
+tetregex@163zsy.net
+tetregex@zsything.org
+tetregex@zsything.edu
+tetregex@zsything.ttt
+a@1.com
+tetregex@163.cccom
+
+匹配com或net结尾的
+[huawei@n148 reg]$ grep -E "(com|net)$" mail
+zsything@zsything.net
+zhuangshuangyin@szything.net
+tetregex@163.com
+tetregex@163zsy.net
+a@1.com
+tetregex@163.cccom
 ```
 ## 精准匹配m次 {m}
-\{m\}  表示之前的字符连续出现m次时会被匹配到。  
 ```
+正则表达式后面跟上{m}标明精确匹配该正则 m 次。
+
 [huawei@n148 sed]$ cat numbers.txt
 1
 12
@@ -712,65 +931,49 @@ ef eef eeef
 [huawei@n148 reg]$ grep -n "abc\{,2\}" regex.txt 匹配连续0~2次c
 8:ab abc abcc
 ```
-## 通配任意字符 . *
 
+## 词首词尾\b   非词首词尾\B
+\b 用来匹配单词开头(\bxx)或结尾(xx\b)的任意字符，因此\bthe\b 将匹配 the,但不匹配 they。\bthe 将匹配 the 或 they。  
+非词首非词尾即一个字符串里包含了要找的子串
 ```
-*表示之前的字符连续出现任意次数（包括0次）
-.表示匹配任意单个字符
-使用 .* 表示任意长度的任意字符，与通配符中的*所表达的意思一样
 
-[huawei@n148 reg]$ grep -n "e*f" regex.txt	匹配n次e后接f的
-9:ef eef eeef
-[huawei@n148 reg]$ grep -n "d*" regex.txt 匹配n次d的，包含0次所以匹配了所有行
-1:a a
-2:aa
-3:a aa
-4:bb
-5:bbb
-6:c cc ccc
-7:dddd d dd ddd
-8:ab abc abcc
-9:ef eef eeef
+[huawei@n148 sed]$ cat words.txt
+word matching using: the
+word matching using: thethe
+word matching using: they
 
-[huawei@n148 reg]$ grep -n "ee." regex.txt 匹配ee开头后跟一个任意字符
-9:ef eef eeef
-[huawei@n148 reg]$ grep -n "ee.." regex.txt 匹配ee开头后跟儿个任意字符
-9:ef eef eeef
+匹配包含 the 作为整个单词的行。注意：如果没有后面那个\b,将匹配所有行。
+[huawei@n148 sed]$ sed -n '/\bthe\b/ p' words.txt
+word matching using: the
 
-[huawei@n148 reg]$ grep -n "a.*" regex.txt 匹配a开头的行
-1:a a
-2:aa
-3:a aa
-8:ab abc abcc
+匹配所有以 the 开头的单词:
+[huawei@n148 sed]$ sed -n '/\bthe/ p' words.txt
+word matching using: the
+word matching using: thethe
+word matching using: they
 
+
+[huawei@n148 reg]$ cat -n REG
+     1  abchello world
+     2  abc helloabc abc
+     3  abc abcabchelloabc abc
+     4  abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\bhello" REG
+abc helloabc abc
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "hello\b" REG
+abchello world
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\bhello\b" REG
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$ grep "\Bhello" REG
+abchello world
+abc abcabchelloabc abc
+abchello helloabc hello ahelloa
+[huawei@n148 reg]$
 ```
-## 匹配前字符0~1次、匹配前字符1~无限次
-```
-\? 表示匹配其前面的字符0或1次，换句话说，就是前面的字符要么没有，要么有一个。
-\+ 表示匹配其前面的字符至少1次，换句话说，就是前面的字符必须有至少一个。
-
-[huawei@n148 sed]$ cat log.txt
-log: input.txt
-log:
-log: testing resumed
-log:
-log:output created
-
-显示包含 log:并且 log:后面有一个或多个空格的所有行：
-[huawei@n148 sed]$ sed -n '/log: \+/ p' log.txt
-log: input.txt
-log: testing resumed
 
 
-显示包含 log:并且 log:后面有0个或1个空格的所有行：
-[huawei@n148 sed]$ sed -n '/log: \?/ p' log.txt
-log: input.txt
-log:
-log: testing resumed
-log:
-log:output created
-
-```
 ## 字母、大写字母、小写字母、数字、空白、符号
 ```
 [[:alpha:]]  表示任意大小写字母
@@ -802,59 +1005,9 @@ a1a3
 [huawei@n148 reg]$ grep -n "a[0-9]\{3\}" reg1 匹配a后面3个数字
 8:a123
 ```
-## 匹配指定范围内的任意单个字符 [ ]
-```
-[ ] 表示匹配指定范围内的任意单个字符，换句话说，就是字符与方括号[ ]内的任意一个字符相同，就可以被匹配到。
-[^ ]表示匹配指定范围外的任意单个字符，注意，它与[ ]的含义正好相反。
-[^0-9]与[^[:digit:]]等效
-[^a-z]与[^[:lower:]]等效
-[^A-Z]与[^[:upper:]]等效
-[^a-zA-Z]与[^[:alpha:]]等效
-[^a-zA-Z0-9]与[^[:alnum:]]等效
 
-[huawei@n148 reg]$ cat reg2
-bc
-bd
-be
-bf
-bg
-
-[huawei@n148 reg]$ grep -n "b[ceg]" reg2
-1:bc
-3:be
-5:bg
-
-
-[huawei@n148 reg]$ cat reg3
-c3
-cB
-cC
-cd
-cE
-c$
-c#
-[huawei@n148 reg]$ grep -n "c[Bd#3]" reg3
-1:c3
-2:cB
-4:cd
-7:c#
-[huawei@n148 reg]$ grep -n "c[^3BCDE]" reg3
-4:cd
-6:c$
-7:c#
-[huawei@n148 reg]$ grep -n "c[^0-9]" reg3 匹配e后跟字符不是数字的
-2:cB
-3:cC
-4:cd
-5:cE
-6:c$
-7:c#
-
-```
-
-## 分组、后向引用（回溯引用）
-用于匹配连续n次的字符串
-
+## 分组、后向引用（回溯引用）\n
+可以给正则表达式分组，以便在后面引用它们
 ```
 \( \) 表示分组，我们可以将其中的内容当做一个整体，分组可以嵌套。
 \(ab\) 表示将ab当做一个整体去处理。
@@ -865,7 +1018,7 @@ c#
 word matching using: the
 word matching using: thethe
 word matching using: they
-只匹配重复 the 两次的行:
+只匹配重复 the 两次的行。同理，”\([0-9]\)\1” 匹配连续两个相同的数字，如 11,22,33 …..
 [huawei@n148 sed]$ sed -n '/\(the\)\1/ p' words.txt
 word matching using: thethe
 
@@ -921,48 +1074,7 @@ Hiiii world Hello -- Hello
 ![相后引用](https://www.zsythink.net/wp-content/uploads/2017/06/060117_1536_9.png)
 ![嵌套的分组序号](https://www.zsythink.net/wp-content/uploads/2017/06/060117_1536_13.png)
 
-## 转义符号
-```
-转义这几个:  \.  \*  \?   \+  \\
-转义\就要用到单引号；
-转义其他符号就要用到双引号；
 
-[huawei@n148 sed]$ sed -n '/127\.0\.0\.1/ p' /etc/hosts
-127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-
-[huawei@n148 reg]$ cat reg11
-bae
-a1#
-ddd
-a-!
-ccc
-a..
-aaaa
-a*
-ab
-a
-ab?
-ab+
-a\
-abc
-a\\
-a\a
-
-[huawei@n148 reg]$ grep "a\.\." reg11	仅匹配a..
-a..
-[huawei@n148 reg]$ grep "a\*" reg11		仅匹配a*
-a*
-[huawei@n148 reg]$ grep "ab?" reg11		仅匹配ab?
-ab?
-[huawei@n148 reg]$ grep "ab+" reg11		仅匹配ab+
-ab+
-[huawei@n148 reg]$ grep 'a\\' reg11		仅匹配a\
-a\
-a\\
-a\a
-[huawei@n148 reg]$ grep 'a\\\\' reg11	仅匹配a\\
-a\\
-```
 ## 手机号、ip地址
 ```
 一个以136开头的11位数字，并且这11个数字作为一个单独的单词存在
@@ -1044,61 +1156,6 @@ $：表示锚定行尾，此字符前面的任意内容必须出现在行尾，�
         inet 192.168.122.1  netmask 255.255.255.0  broadcast 192.168.122.255
 
 ```
-## 行首^	行尾$
-```
-[huawei@n148 sed]$ sed -n '/^103/ p' employee.txt	匹配103开头的
-103,Raj Reddy,Sysadmin
-[huawei@n148 sed]$ sed -n '/r$/ p' employee.txt		匹配r结尾的
-102,Jason Smith,IT Manager
-104,Anand Ram,Developer
-105,Jane Miller,Sales Manager
-
-```
-## 或关系|
-```
-[huawei@n148 reg]$ cat mail
-zsything@zsything.net
-1@2
-zhuangshuangyin@szything.net
-aaa.org
-tetregex@163.com
-tetregex@163zsy.net
-tetregex@zsything.org
-tetregex@zsything.edu
-tetregex@zsything.ttt
-a@1.com
-tetregex@163.cccom
-
-匹配com或net结尾的
-[huawei@n148 reg]$ grep -E "(com|net)$" mail
-zsything@zsything.net
-zhuangshuangyin@szything.net
-tetregex@163.com
-tetregex@163zsy.net
-a@1.com
-tetregex@163.cccom
-
-
-[huawei@n148 sed]$ cat employee.txt
-101,John Doe,CEO
-102,Jason Smith,IT Manager
-103,Raj Reddy,Sysadmin
-104,Anand Ram,Developer
-105,Jane Miller,Sales Manager
-
-打印包含 101 或者包含 102 的行：
-[huawei@n148 sed]$ sed -n '/101\|102/ p' employee.txt
-101,John Doe,CEO
-102,Jason Smith,IT Manager
-
-打印包含数字 2~3 或者包含 105 的行：
-[huawei@n148 sed]$ sed -n '/[2-3]\|105/ p' employee.txt
-102,Jason Smith,IT Manager
-103,Raj Reddy,Sysadmin
-105,Jane Miller,Sales Manager
-
-```
-
 # SED
 Stream Editor文本流编辑，sed是一个“非交互式的”面向字符流的编辑器。能同时处理多个文件多行的内容，可以不对原文件改动，把整个文件输入到屏幕,可以把只匹配到模式的内容输入到屏幕上。还可以对原文件改动，但是不会再屏幕上返回结果。
 https://www.cnblogs.com/ctaixw/p/5860221.html
@@ -1361,6 +1418,48 @@ log:output created
 333
 444
 555
+===================================
+
+[huawei@n148 reg]$ cat test.txt
+AAA
+#正常的空行
+
+BBBB
+
+#由Tab组成的空行
+AAABBBB
+      
+#由空格组成的空行
+CCOCC
+
+#正常的空行
+DD
+[huawei@n148 reg]# sed '/[[:space:]]/d' test.txt #删除由tab和空格组成的空行
+AAA
+
+BBBB
+AAABBBB
+CCOCC
+
+DD
+
+
+[huawei@n148 reg]# sed '/^$/d' test.txt #删除空行
+AAA
+BBBB
+
+AAABBBB
+
+CCOCC
+DD
+
+
+[huawei@n148 reg]# sed -e '/[[:space:]]/d' -e '/^$/d' test.txt #删除各种空行
+AAA
+BBBB
+AAABBBB
+CCOCC
+DD
 ===================================
 
 删除不匹配2或3的行，/2\|3/ 表示匹配2或3 ，！表示取反
@@ -1894,7 +1993,7 @@ hello22
 105,Jane Miller,Sales Director
 ```
 
-全局标志 g
+### 全局标志 g
 ```
 g 代表全局(global)。 默认情况下，sed 至会替换每行中第一次出现的 original-string。如果你要替换每行中出现的所有 original-string,就需要使用 g。将文本中所有的2都替换为hello。会在所有行上替换，因为没有指定地址范围。
 
@@ -1905,7 +2004,7 @@ hellohellohello
 444
 555
 ```
-数字标志 (1,2,3 ….)
+### 数字标志 (1,2,3 ….)
 
 ```
 使用数字可以指定 original-string 出现的次序。只有第 n 次出现的 original-string 才会触发替换。每行的数字从 1 开始，最大为 512。
@@ -1918,7 +2017,7 @@ hellohellohello
 444
 555
 ```
-打印标志 p(print)
+### 打印标志 p(print)
 ```
 命令 p 代表 print。当替换操作完成后，打印替换后的行。与其他打印命令类似，sed 中比较有用的方法是和-n 一起使用以抑制默认的打印操作。
 
@@ -1948,7 +2047,7 @@ locate command uses database to find files
 101,Jason Doe,CEO
 105,Jason Miller,Sales Manager
 ```
-写标志 w
+### 写标志 w
 
 ```
 标志 w 代表 write。当替换操作执行成功后，它把替换后的结果保存的文件中。多数人更倾向于使用 p 打印内容，然后重定向到文件中。为了对 sed 标志有个完整的描述，在这里把这个标志也提出来了。
@@ -1976,13 +2075,13 @@ hellohellohello
 [huawei@n148 reg]$ cat 2.txt
 hellohellohello
 ```
-忽略大小写标志 i (ignore)
+### 忽略大小写标志 i (ignore)
 ```
 替换标志 i 代表忽略大小写。可以使用 i 来以小写字符的模式匹配 original-string。该标志只有 GNU Sed 中才可使用。
 本地测试不起作用 sed 's/john/Johnny/i' employee.txt
 ```
 
-执行命令标志 e (excuate)
+### 执行命令标志 e (excuate)
 ```
 替换标志 e 代表执行(execute)。该标志可以将模式空间中的任何内容当做 shell 命令执行，并把命令执行的结果返回到模式空间。该标志只有 GNU Sed 中才可使用。
 
@@ -2002,7 +2101,7 @@ ls -l/etc/group
 -rw-r--r-- 1 root root 1115 Sep 24 15:08 /etc/group
 
 ```
-替换命令分界符，即替换掉/
+### 替换命令分界符，即替换掉/
 ```
 默认的分界符/,即 s/original-string/replacement-string/g,如果在original-string 或 replacement-string 中有/,那么需要使用反斜杠\来转义
 
@@ -2025,7 +2124,7 @@ reading /usr/bin directory
 
 ```
 
-单行内容上执行多个命令
+### 单行内容上执行多个命令
 ```
 sed 执行的过程是读取内容、执行命令、打印结果、重复循环。其中执行命令部分，可以由多个命令执行，sed 将一个一个地依次执行它们。例如，你有两个命令，sed 将在模式空间中执行第一个命令，然后执行第二个命令。如果第一个命令改变了模式空间的内容，第二个命令会在改变后的模式空间上执行(此时模式空间的内容已经不是最开始读取进来的内容了)。
 
@@ -2042,7 +2141,7 @@ sed: -e expression #1, char 48: extra characters after command
 sed: -e expression #1, char 25: unknown option to `s'
 
 ```
-其他高级些的案例
+### 其他高级些的案例
 ```
 匹配有#号的行，替换匹配行中逗号后的所有内容为空  (,.*)表示逗号后的所有内容
 [huawei@n148 reg]$ cat 1.txt
@@ -2190,6 +2289,34 @@ hellohaha
 103,Raj Reddy,Sysadmin
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
+
+
+------------------------------
+下面的几种方法理解的还有问题。。。
+
+打印奇数行，即打印一行跳过一行
+[huawei@n148 sed]$ sed -n 'p;n' employee.txt
+101,John Doe,CEO
+103,Raj Reddy,Sysadmin
+105,Jane Miller,Sales Manager
+
+打印一行跳过2行
+[huawei@n148 sed]$ sed -n 'p;n;n' employee.txt
+101,John Doe,CEO
+104,Anand Ram,Developer
+
+打印偶数行，即跳过一行打印一行
+[huawei@n148 sed]$ sed -n 'n;p' employee.txt
+102,Jason Smith,IT Manager
+104,Anand Ram,Developer
+
+跳过一行打印一行2遍，这是错的。。。
+[huawei@n148 sed]$ sed -n 'n;p;p' employee.txt
+102,Jason Smith,IT Manager
+102,Jason Smith,IT Manager
+104,Anand Ram,Developer
+104,Anand Ram,Developer
+
 ```
 ## 执行sed脚本，选项 -f
 把具体的sed命令放入文件中然后使用-f 选项来调用，也可以使用—file 来代替-f
@@ -2232,7 +2359,7 @@ root:x:0:0:root:/root:/bin/bash
 mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
 nobody:x:99:99:Nobody:/:/sbin/nologin
 ```
-## 直接修改输入文件，选项 -i
+## 写会原文件，选项 -i
 为了修改输入文件，通常方法是把输出重定向到一个临时文件，然后重命名该临时文件。也可以使用--in-place 来代替-i:
 ```
 [huawei@n148 sed]$ sed 's/John/Johnny/' employee.txt > new-employee.txt
@@ -2573,6 +2700,217 @@ grep –v (打印不匹配的行):
 [huawei@n148 sed]$ sed -n '1,10 p' /etc/passwd
 [huawei@n148 sed]$ sed '10 q' /etc/passwd
 ```
+
+## 模式空间 pattern space、保持空间 hold space
+模式空间是内部维护的一个缓存，存放着读入的一行或者多行内容，处理完后会自动清空，无法保存模式空间中被处理的行，因此sed又引入了另外一个缓存空间-保持空间用于保存模式空间的内容，模式空间的内容可以复制到保持空间，同样地保持空间的内容可以复制回模式空间。sed提供了几组命令用来完成复制的工作，其它命令无法匹配也不能修改模式空间的内容。
+* 保存（Hold) h/H：将模式空间的内容复制或者追加到保持空间
+* 取回（Get）g/G：将保持空间的内容复制或者追加到模式空间
+* 交换（Exchange）x：交换模式空间和保持空间的内容
+
+交换命令比较容易理解，保存命令和取回命令都有大写和小写两种形式，这两种形式的区别是小写的是将会覆盖目的空间的内容，而大写的是将内容追加到目的空间，追加的内容和原有的内容是以\n分隔。
+
+### 基本使用 h、G、x
+```
+[huawei@n148 sed]$ cat test.txt
+1
+2
+11
+22
+111
+222
+==================================================
+
+返回的结果正常，因为复制到保持空间的内容并没有取回
+
+[huawei@n148 sed]$ sed 'h' test.txt
+1
+2
+11
+22
+111
+222
+==================================================
+
+每一行的后面都多了一个空行，原因是每行都会从保持空间取回一行，追加（大写的G）到模式空间的内容之后，以\n分隔。
+
+[huawei@n148 sed]$ sed 'G' test.txt
+1
+
+2
+
+11
+
+22
+
+111
+
+222
+
+==================================================
+
+ 命令执行后，发现前面多了一个空行并且最后一行不见了。我在前面一直强调sed命令用好，要有用大脑回顾命令执行过程的能力：
+* 当读入第一行的时候，模式空间中的内容是第一行的内容，而保持空间是空的，这个时候交换两个空间，导致模式空间为空，保持空间为第一行的内容，因此输出为空行；
+* 当读入下一行之后，模式空间为第2行的内容，保持空间为第一行的内容，交换后输出第1行的内容；
+* 依次读入每一行，输出上一行的内容；
+* 直到最后一行被读入到模式空间，交换后输出倒数第二行的内容，而最后一行的内容并没有输出，此时命令执行结束。
+
+[huawei@n148 sed]$ sed 'x' test.txt
+
+1
+2
+11
+22
+111
+==================================================
+```
+### 插入空行
+```
+[huawei@n148 sed]$ seq 5|sed 'G'
+1
+
+2
+
+3
+
+4
+
+5
+
+```
+### 逆序输出
+用sed模拟出tac的功能（倒序输出）
+```
+ 1!G：第1行不执行“G”命令，从第2行开始执行。
+ $!d：最后一行不删除（保留最后1行）。
+
+[huawei@n148 sed]$ seq 10|sed '1!G;h;$!d'
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+```
+
+### join效果
+```
+使用H将每一行都追加到保持空间
+这里利用d命令打断常规的命令执行流程，让sed继续读入新的一行，直接到将最后一行都放到保持空间。
+这个时候使用x命令将保持空间的内容交换到模式空间，模式空间的内容现在是这样的：\n1\n11\n2\n11\n22\n111\n222。
+替换的步骤分成两个，首先去掉首个回车符，然后把剩余的回车符替换成逗号。
+
+[huawei@n148 sed]$ sed 'H;$!d;${x;s/^\n//;s/\n/,/g}' test.txt
+1,2,11,22,111,222
+```
+### 将语句中的特定单词转换成大写，牛！
+精准转换Match为大写
+```
+[huawei@n148 sed]$ cat find.txt
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+find the Match statement
+bcdefghijklmnopqrstuvwxyz
+
+不可y命令，会把模式空间的所有内容都转换，不满足需求
+[huawei@n148 sed]$ sed 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' find.txt
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+FIND THE MATCH STATEMENT
+BCDEFGHIJKLMNOPQRSTUVWXYZ
+
+================================================
+详细步骤说明看下面。。。
+[huawei@n148 sed]$ sed '/the .* statement/{
+h
+s/.*the \(.*\) statement.*/\1/
+y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/
+G
+s/\(.*\)\n\(.*the \).*\( statement.*\)/\2\1\3/
+}'  find.txt
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+find the MATCH statement
+bcdefghijklmnopqrstuvwxyz
+-------------------------
+1 
+首先“/the .* statement/”找到需要处理的行（假设当前行为find the Match statement）。
+
+Pattern space: find the Match statement
+-------------------------
+2 
+h：将当前行保存到保持空间：
+
+Pattern space: find the Match statement
+Hold space: find the Match statement
+-------------------------
+3
+“s/.*the \(.*\) statement.*/\1/”：  用替换命令获取需要处理的单词：
+
+Pattern space: Match
+Hold space: find the Match statement
+-------------------------
+4
+“y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/”：转换成大写
+
+Pattern space: MATCH
+Hold space: find the Match statement
+-------------------------
+5
+G：将保持空间的内容追加到模式空间最后
+
+Pattern space: MATCH\nfind the Match statement
+Hold space: find the Match statement
+-------------------------
+6
+“s/\(.*\)\n\(.*the \).*\( statement.*\)/\2\1\3/”：再进行替换
+
+Pattern space: find the MATCH statement
+Hold space: find the Match statement
+-------------------------
+```
+### 行列转化
+```
+-n ：取消默认的输出
+H表示模式空间的内容追加到保持空间
+${...} 表示最后执行，意思是最后才执行{ }里面的内容，所以最后的时候保持空间里面的内容和cat的内容一致
+x 表示交换保持空间和模式空间的内容，那么此时模式空间里的内容就是cat的内容了，此时再使用 "s/\n/ /g" 替换命令，将换行符\n,替换成空格，这样列就变成行了，反之亦然
+
+[huawei@n148 sed]$ cat foo
+1
+2
+3
+4
+5
+[huawei@n148 sed]$ sed -n 'H;${x;s/\n/ /g;p}' foo
+ 1 2 3 4 5
+
+另一个版本
+[huawei@n148 sed]$ cat test.txt
+11
+22
+33
+44
+[huawei@n148 sed]$ sed ':a;N;s/\n/ /;ta' test.txt
+11 22 33 44
+[huawei@n148 sed]$ sed ':b;N;s/\n/ /;tb' test.txt
+11 22 33 44
+```
+
+### 累加求和
+```
+H表示模式空间的内容追加到保持空间
+${x;s/\n/+/g;s/^+//;p} : 最后执行(因为${} )；交换保持空间和模式空间的内容;
+“s/\n/+/g”   将\n替换成+
+“s/^+//”    将开头的加号换为空
+最后使用bc计算器就可以求和了
+
+[huawei@n148 sed]$ seq 100|sed -n 'H;${x;s/\n/+/g;s/^+//;p}' | bc
+5050
+```
+
+
+
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
 ## 内建变量
@@ -2894,7 +3232,19 @@ Germany 96 61 Europe
 England 94 56 Europe
 ```
 
-# cat，more，less，tail，head 查看文件内容
+# more，less，tail，head 查看文件内容
+# cat、tac
+tac 是 cat 的反转版本， 内容会被反转之后输出。 
+```
+[huawei@n148 sed]$ cat number.txt
+one
+two
+three
+[huawei@n148 sed]$ tac number.txt
+three
+two
+one
+```
 # wc 统计行数-l、字数-w、字节数-c
 ```
 [huawei@10 bin]$ cat data |wc
