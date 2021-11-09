@@ -1228,6 +1228,9 @@ p:打印匹配行（和-n选项一起合用）
 n:输出  只打印模式匹配的行，否则会输出所有
 r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内容写入到文件
 ```
+## 匹配行号范围
+数字1,数字2 命令：2个数字为行号，如果当前行是此行号范围内就执行命令，案例见sed模拟tail的打印尾n行
+
 ## 打印模式空间 p
 命令 p，可以打印当前模式空间的内容。通常使还需要配合-n 选项来屏蔽 sed 的默认输出，否则当执行命令 p 时，每行记录会输出两次
 ```
@@ -1268,7 +1271,7 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 [huawei@n148 sed]$ sed -n '2 p' employee.txt
 102,Jason Smith,IT Manager
 
-3种方法打印第 2 至第 4 行:
+3种方法打印第 2 至第 4 行: 即匹配当前模式中是第2行或第3行或第4行
 [huawei@n148 sed]$ sed -n '2,4 p' employee.txt
 102,Jason Smith,IT Manager
 103,Raj Reddy,Sysadmin
@@ -1369,11 +1372,23 @@ log: input.txt
 log: testing resumed
 log:output created
 ```
-
-## 删除行 d
-它只删除模式空间的内容，不会修改原始文件的内容。注意：如果有多个命令，sed 遇到命令 d 时，会删除匹配到的整行数据，其余的命令将无法操作被删除的行。
+## 打印模式空间第一行 P
+```
+见“连行”
+```
+## 清理模式空间所有内容 d
+d命令是删除当前模式空间内容（不再传至标准输出），并放弃之后的命令，并对新读取的内容，重头执行sed。
 
 ```
+执行完d就下一轮了，后面的np不会被执行到
+[huawei@n148 sed]$ seq 10|sed -e 'n;d' -e 'n;p'
+1
+3
+5
+7
+9
+
+
 [huawei@n148 reg]$ sed 'd' employee.txt
 
 如果不提供地址范围，sed 默认匹配所有行，因为它匹配了所有行并删除了它们,所以什么都不会输出。所以指定要删除的地址范围更有用
@@ -1539,6 +1554,8 @@ D表示清除模式空间中的从模式头到第一个\n之间的内容（可�
 
 [huawei@n148 sed]$ seq 5|sed 'N;D'
 5
+
+也可参考“连行”案例
 ```
 ## 把模式空间内容写到文件中 w
 可以把当前模式空间的内容保存到文件中。默认情况下模式空间的内容每次都会打印到标准输出，如果要把输出保存到文件同时不显示到屏幕上，还需要使用-n 选项。
@@ -2128,7 +2145,7 @@ hellohellohello
 444
 555
 ```
-### 指定倒数第几次
+### 替换指定行的倒数第几次
 ```
 替换倒数第2个
 1 把\去掉后，就变成(.*)foo(.*foo),其中(.*)匹配前3个foo，对应分组1；(.*foo)匹配最后1个foo，对应组2
@@ -2235,13 +2252,13 @@ hellohellohello
 [huawei@n148 reg]$ cat 2.txt
 hellohellohello
 ```
-### 忽略大小写标志 i (ignore)
+### 忽略大小写标志 i
 ```
 替换标志 i 代表忽略大小写。可以使用 i 来以小写字符的模式匹配 original-string。该标志只有 GNU Sed 中才可使用。
 本地测试不起作用 sed 's/john/Johnny/i' employee.txt
 ```
 
-### 执行命令标志 e (excuate)
+### 执行命令标志 e
 ```
 替换标志 e 代表执行(execute)。该标志可以将模式空间中的任何内容当做 shell 命令执行，并把命令执行的结果返回到模式空间。该标志只有 GNU Sed 中才可使用。
 
@@ -2475,7 +2492,7 @@ s/Manager/Director/
 <Jane Miller,105, Sales Director>
 
 ```
-## 多套命令，选项 -e 或 ；
+## 多套命令，选项 -e 或 ；以及 { }
 即执行多个，也可以使用—expression 来代替。
 ```
 [huawei@n148 sed]$ sed -n -e '/^root/ p' -e '/^nobody/ p' -e '/^mail/ p' /etc/passwd
@@ -2491,6 +2508,12 @@ nobody:x:99:99:Nobody:/:/sbin/nologin
 4
 5
 6
+
+不是最后一行则h将模式覆盖到保持，不是最后一行则d清理模式，所以打印除了最后一行，作用不是重点，看第2次的{}式样语法
+[huawei@n148 sed]$ seq 5|sed  '$!h;$!d'
+5
+[huawei@n148 sed]$ seq 5|sed  '$!{h;d}'
+5
 ```
 ## 写会原文件，选项 -i
 为了修改输入文件，通常方法是把输出重定向到一个临时文件，然后重命名该临时文件。也可以使用--in-place 来代替-i:
@@ -2923,6 +2946,19 @@ nfsnobody:x:65534:65534:Anonymous NFS User:/var/lib/nfs:/sbin/nologin
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
 ```
+## sed模拟paste
+匹配的样式单一。如果折行大于2则要改模式
+```
+[huawei@n148 sed]$ sed '$!N;s/\n/ /'  employee.txt
+101,John Doe,CEO 102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin 104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed 'N;s/\n/ /'  employee.txt
+101,John Doe,CEO 102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin 104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+```
 ## sed模拟rev  包含GsD&分组;
 反转一行中每个字符的顺序
 ```
@@ -2972,15 +3008,77 @@ grep –v (打印不匹配的行):
 104,Anand Ram,Developer
 ```
 ## sed模拟head
+实验命令q退出来实现打印前n行
 ```
+[huawei@n148 sed]$ sed q /etc/passwd
 [huawei@n148 sed]$ head -10 /etc/passwd
 [huawei@n148 sed]$ sed '11,$ d' /etc/passwd
 [huawei@n148 sed]$ sed -n '1,10 p' /etc/passwd
 [huawei@n148 sed]$ sed '10 q' /etc/passwd
+[huawei@n148 sed]$ sed 10q /etc/passwd
 ```
+## sed模拟tail
+```
+显示文件中的最后一行（模拟“tail -1”）
+$!d:非最后一行都删掉了
+[huawei@n148 sed]$ sed '$!d'  employee.txt
+105,Jane Miller,Sales Manager
+最后一行打印，其余不打印
+[huawei@n148 sed]$  sed -n '$p' employee.txt
+105,Jane Miller,Sales Manager
 
 
-## 模式空间 pattern space、保持空间 hold space
+显示文件中的最后2行（模拟“tail -2”命令）
+1 显示101，然后$!N成立，把102读入模式，此时是101\n102，
+2 然后$!D，因为还有103所以成立，然后D把模式里的101\n删了
+3 循环直到模拟里只有104，然后执行$!N成立把105读入，变为104\n105
+4 然后$!D失败，因为到文件尾了，所以也不执行D，最终大印出104\n105，即末尾两行
+[huawei@n148 sed]$ sed '$!N;$!D' employee.txt
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+
+[huawei@n148 sed]$ seq 5 | sed 'N;$!D'
+4
+5
+
+
+打印尾5行
+[huawei@n148 sed]$ seq 200 |sed -e :a -e '$q;N;6,$D;ba;'
+196
+197
+198
+199
+200
+1 先看“-e :a -e '$q;N;ba'”这个循环不停的读入下一行直到结尾，这样整个文本就形成一个由\n分割的链
+2 现在加上“6,$D”执行得到最终结果，即如果当前读的行是在第六行之后，则执行D，会去除模式空间的首行。最终只保留了末尾5行
+
+[huawei@n148 sed]$ seq 200 | sed ':a; N; 1,5ba; D'
+196
+197
+198
+199
+200
+1 执行“:a; N; 1,5ba”将文件的前6行读入模式空间。首先N后模式是前2行，然后“1,5ba”,2在1~5之间所以循环回到“a” ，退出循环时候模式里是1~6
+2 执行D，1被去除（此时模式里是5行）
+3 下一轮开始N，加入7，执行D（还是5行）
+4 直到最后5行结束
+```
+## 显示文件的倒数第2行
+```
+1 如果不是最后一行则执行hd，h将模式内容覆盖到保持，d则清理模式，这部分的目的就是如果不是最后一行就把内容备份到保持中
+2 如果是最后一行则不进行hd，然后x交换模式与保持，交换后模式里是上一轮的行备份，保持则为最后一行的内容，并最后打印出了模式里的内容
+3 $!{h;d;}的语法见多套命令
+
+[huawei@n148 sed]$ seq 5|sed -e '$!{h;d;}' -e x
+4
+
+后面两种未分析
+sed -e '$!{h;d;}' -e x              # 当文件中只有一行时，输入空行
+sed -e '1{$q;}' -e '$!{h;d;}' -e x  # 当文件中只有一行时，显示该行
+sed -e '1{$d;}' -e '$!{h;d;}' -e x  # 当文件中只有一行时，不输出
+```
+## 模式空间、保持空间
 模式空间是内部维护的一个缓存，存放着读入的一行或者多行内容，处理完后会自动清空，无法保存模式空间中被处理的行，因此sed又引入了另外一个缓存空间-保持空间用于保存模式空间的内容，模式空间的内容可以复制到保持空间，同样地保持空间的内容可以复制回模式空间。sed提供了几组命令用来完成复制的工作，其它命令无法匹配也不能修改模式空间的内容。
 * 保存（Hold) h/H：将模式空间的内容覆盖或者追加到保持空间
 * 取回（Get）g/G：将保持空间的内容覆盖或者追加到模式空间
@@ -2988,7 +3086,7 @@ grep –v (打印不匹配的行):
 
 交换命令比较容易理解，保存命令和取回命令都有大写和小写两种形式，这两种形式的区别是小写的是将会覆盖目的空间的内容，而大写的是将内容追加到目的空间，追加的内容和原有的内容是以\n分隔。
 
-### 基本命令 h、G、x
+### 基本命令 h、H、G、g、x
 ```
 [huawei@n148 sed]$ cat test.txt
 1
@@ -3156,6 +3254,20 @@ grep –v (打印不匹配的行):
 
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
+
+在每3行后增加一空白行
+[huawei@n148 sed]$  sed 'n;n;G;'  myscript.sed
+#!/bin/sed -f
+#▒▒▒▒▒▒һ▒к͵ڶ▒▒▒
+s/\([^,]*\),\([^,]*\),\(.*\).*/\2,\1, \3/g
+
+#▒▒▒▒▒▒▒▒▒ݷ▒▒▒<>▒▒
+s/^.*/<&>/
+#▒▒ Developer ▒滻Ϊ IT Manager
+
+s/Developer/IT Manager/
+#▒▒ Manager ▒滻Ϊ Director
+s/Manager/Director/
 
 ```
 ### 逆序输出
@@ -3359,6 +3471,67 @@ s命令成功替换后继续执行ta，跳转到标签a继续循环，直到向�
 原理同上，只是两边都加了空格
 [huawei@n148 sed]$ echo "abcde"| sed -e :a -e 's/^.\{1,9\}$/ & /;ta'
    abcde
+```
+### 连行
+* 标志在行尾  
+如果当前行以反斜杠“\”结束，则将下一行并到当前行末尾，并去掉原来行尾的反斜杠
+```
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager\
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer\
+105,Jane Miller,Sales Manager
+
+1 匹配行尾有\的，并再读一行新的附近到模式（N），此时模式内为xxx\\nyyy
+2 替换\\n为空
+3 循环之
+[huawei@n148 sed]$ sed -e :a -e '/\\$/N; s/\\\n//; ta' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer105,Jane Miller,Sales Manager
+```
+
+* 标志在行首  
+如果当前行以=开头，将当前行并到上一行末尾并以单个空格代替原来行头的“=”
+```
+[huawei@n148 sed]$ cat employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+=103,Raj Reddy,Sysadmin
+=104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+
+[huawei@n148 sed]$ sed -e :a -e '$!N;s/\n=/ /;ta' -e 'P;D' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager 103,Raj Reddy,Sysadmin 104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+分析（先去除了PD）：
+最后一行不N其余行都N
+1 配合循环替换\n=为空，则第一次打印的是101与102两行，因为有N，此时101、102行已经都完毕了
+2 第二次打印的是103与104行，并且是将104前面的\n=替换完成了
+3 第三次打印105，其实最终整个文件被执行了三次
+[huawei@n148 sed]$ sed -e :a -e '$!N;s/\n=/ /;ta' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+=103,Raj Reddy,Sysadmin 104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+加上PD，替换失败则PD（P打印模式第一行并D删除模式第一行，此时模式里剩下前面执行N，进来的新一行），则与最终结果一样了
+1 第一次循环先打印第一行，删除第一行，模式中有102
+2 再次执行则103被N进来（此时模式有102\n103，执行s成功再次N进来104，替换又成功，再次105，此时失败退出循环，P完后D模式里的第一行，此时打印除了102-103-104那行
+3 最后打印105，也执行了三次，只不过与上面内容不同
+```
+### 千分号
+```
+[huawei@n148 sed]$ echo 123456789 | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta'
+123,456,789
+
+1 分组1(.*[0-9])表示n个字符后跟一个数字，即匹配了123456，规则见sed贪婪匹配
+2 分组2([0-9]{3})表示三个数字
+3 s替换成功（加入，）则循环之，即从后向前3个字符加一个逗号
 ```
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
@@ -3710,6 +3883,39 @@ reganaM TI,htimS nosaJ,201
 nimdasyS,yddeR jaR,301
 repoleveD,maR dnanA,401
 reganaM selaS,relliM enaJ,501
+```
+
+# paste 合并文件
+用来将多个文件的内容合并  
+-d 指定域分隔符，即指定分隔来自不同文件或不同列的行的分隔符   
+-s 将每个多行文件合并为一行，默认用空格或tab键分隔，可用-d选项指定分隔符   
+“-” 符号也是paste的一个选项，对于每一个“-”，从标准输入读入一次数据，默认使用空格或tab键作为分隔符，该选项可定制输出格式   
+```
+[huawei@n148 sed]$ paste employee.txt number.txt
+101,John Doe,CEO        one
+102,Jason Smith,IT Manager      two
+103,Raj Reddy,Sysadmin  three
+104,Anand Ram,Developer
+105,Jane Miller,Sales Manager
+
+
+[huawei@n148 sed]$ paste -d@ number.txt employee.txt
+one@101,John Doe,CEO
+two@102,Jason Smith,IT Manager
+three@103,Raj Reddy,Sysadmin
+@104,Anand Ram,Developer
+@105,Jane Miller,Sales Manager
+
+
+[huawei@n148 sed]$ paste -s number.txt employee.txt
+one     two     three
+101,John Doe,CEO        102,Jason Smith,IT Manager      103,Raj Reddy,Sysadmin  104,Anand Ram,Developer 105,Jane Miller,Sales Manager
+
+
+[huawei@n148 sed]$ cat employee.txt|paste - - -
+101,John Doe,CEO        102,Jason Smith,IT Manager      103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer 105,Jane Miller,Sales Manager
+
 ```
 # wc 统计行数-l、字数-w、字节数-c
 ```
