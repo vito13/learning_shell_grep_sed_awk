@@ -1228,10 +1228,8 @@ p:打印匹配行（和-n选项一起合用）
 n:输出  只打印模式匹配的行，否则会输出所有
 r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内容写入到文件
 ```
-## 匹配行号范围
-数字1,数字2 命令：2个数字为行号，如果当前行是此行号范围内就执行命令，案例见sed模拟tail的打印尾n行
 
-## 打印模式空间 p
+## 打印模式空间 p（小）
 命令 p，可以打印当前模式空间的内容。通常使还需要配合-n 选项来屏蔽 sed 的默认输出，否则当执行命令 p 时，每行记录会输出两次
 ```
 打印 employee.txt 文件，每行会输出两次：
@@ -1255,10 +1253,10 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
 ```
-地址范围  
+## 地址（行号）匹配
 
 如果在命令前面不指定地址范围，那么默认会匹配所有行。下面的例子，在命令前面指定了地址范围：
-* n,m 代表第 n 至第 m 行
+* n,m 匹配行号范围，代表第 n 至第 m 行，如果当前行是此行号范围内就执行命令，案例见sed模拟tail的打印尾n行
 * 波浪号~指定起点与步长。如  
   1~2 匹配 1,3,5,7,……  
   2~2 匹配 2,4,6,8,……  
@@ -1268,11 +1266,20 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 
 ```
 只打印第 2 行
-[huawei@n148 sed]$ sed -n '2 p' employee.txt
+[huawei@n148 sed]$ sed -n '2p' employee.txt
+102,Jason Smith,IT Manager
+[huawei@n148 sed]$ sed '2!d' employee.txt
+102,Jason Smith,IT Manager
+[huawei@n148 sed]$ sed '2q;d' employee.txt
 102,Jason Smith,IT Manager
 
-3种方法打印第 2 至第 4 行: 即匹配当前模式中是第2行或第3行或第4行
+
+打印2到4行
 [huawei@n148 sed]$ sed -n '2,4 p' employee.txt
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+[huawei@n148 sed]$  sed '2,4!d' employee.txt
 102,Jason Smith,IT Manager
 103,Raj Reddy,Sysadmin
 104,Anand Ram,Developer
@@ -1298,9 +1305,13 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 105,Jane Miller,Sales Manager
 
 从第二行开始，每隔两行打印一行，波浪号后面的2表示步长
-[huawei@n148 sed]$ sed  -n '2~2p'  1.txt
-2.how are you
-4.and you
+[huawei@n148 sed]$ sed -n '2~3p' employee.txt
+102,Jason Smith,IT Manager
+105,Jane Miller,Sales Manager
+[huawei@n148 sed]$ sed -n '2,${p;n;n}' employee.txt
+102,Jason Smith,IT Manager
+105,Jane Miller,Sales Manager
+
 
 打印匹配too的行及其向后一行，如果有多行匹配too，则匹配的每一行都会向后多打印一行
 [huawei@n148 sed]$ sed  -n '/too/,+1p'  1.txt
@@ -1308,35 +1319,119 @@ r,w：读和写编辑命令，r用于将内容读入文件，w用于将匹配内
 6.is you
 ```
 
-模式匹配  
-
-上面是使用数字指定地址(或地址范围),也可以使用一个模式(或模式范围)来匹配
-
+## 模式（内容）匹配  
+上面是使用数字指定地址(或地址范围),也可以使用一个模式(或模式范围)来匹配。模式里可以单行也可以多行（多行案例段落匹配）都可被匹配到
 ```
 打印匹配模式”Jane”的行:
 [huawei@n148 sed]$ sed -n '/Jane/ p' employee.txt
 105,Jane Miller,Sales Manager
+匹配到则d不删
+[huawei@n148 sed]$ sed '/Jane/!d' employee.txt
+105,Jane Miller,Sales Manager
+
+
+打印不匹配模式”Jane”的行:
+[huawei@n148 sed]$ sed -n '/Jane/!p' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+[huawei@n148 sed]$ sed '/Jane/d' employee.txt
+101,John Doe,CEO
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+
+打印匹配key的上一行:
+[huawei@n148 sed]$ sed -n '/103/{g;1!p;};h' employee.txt
+102,Jason Smith,IT Manager
+1 首先-n关闭每轮自动打印模式内容
+2 末尾命令h将模式的内容覆盖到保持中，此命令每轮都执行
+3 匹配到103时（首先当前保持中备份的是102）然后g将保持覆盖到模式，执行1!p，即如不是第一行则p打印模式内容
+
+打印匹配key的下一行:
+[huawei@n148 sed]$ sed -n '/103/{n;p;}' employee.txt
+104,Anand Ram,Developer
+1 首先-n关闭每轮自动打印模式内容
+2 匹配到103后会执行n，把下一行覆盖到模式中，然后p打印了出来
+
+
+打印key行号与上下文
+[huawei@n148 sed]$ sed -n -e '/103/{=;x;1!p;g;$!N;p;D;}' -e h employee.txt
+3
+102,Jason Smith,IT Manager
+103,Raj Reddy,Sysadmin
+104,Anand Ram,Developer
+1 关闭自动打印模式-n，每轮执行h即模式覆盖到保持里
+2 匹配到103则=打印行号，交换保持与模式x，此时模式里是102，保持是103
+3 如不是第一行1!p则打印模式（打印了102），然后g保持覆盖到模式，此时模式是103，保持是102
+4 非末尾$!N则读入下一行附加到模式。然后p打印出103\n104，再D删除模式里的第一行103，剩余104，用于最后的h备份使用，再下一轮读取105不匹配，再h备份，结束程序
+
+
+匹配一行中同时包含AAA、BBB、CCC的，顺序无所谓，只有在一行即可
+首先匹配AAA，如果未匹配则d清掉模式然后下一轮，如匹配到则在模式中继续匹配BBB，如法炮制
+[huawei@n148 sed]$ cat ll.txt
+1AAA23
+4567
+890
+
+AbcdBBBefg
+qwe
+qwe
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+[huawei@n148 sed]$ sed '/AAA/!d; /BBB/!d; /CCC/!d' ll.txt
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+
+
+
+匹配一行中同时包含AAA、BBB、CCC的，要求按顺序
+[huawei@n148 sed]$ sed '/AAA.*BBB.*CCC/!d' ll.txt
+123AAA123BBB123CCC123
+
+
+仅打印大于65个字符的行，这里没打印因为echo字符太少了
+“/^.\{65\}”代表每行开头连续65个任意字符才会匹配
+[huawei@n148 sed]$ echo 'Chinabitious goals.' | sed -n '/^.\{65\}/p'
+
+仅打印少于65个字符的行
+[huawei@n148 sed]$ echo 'Chinabitious goals.' | sed -n '/^.\{65\}/!p'
+Chinabitious goals.
+[huawei@n148 sed]$ echo 'Chinabitious goals.' | sed '/^.\{65\}/d'
+Chinabitious goals.
+
 
 打印从匹配Jason 的行到第4行的内容，如果前4 行中，没有匹配到 Jason,那么 sed 会打印第 4 行以后匹配到 Jason 的内容
-[huawei@n148 sed]$ sed -n '/Jason/,4 p' employee.txt
+[huawei@n148 sed]$ sed -n '/Jason/,4p' employee.txt
 102,Jason Smith,IT Manager
 103,Raj Reddy,Sysadmin
 104,Anand Ram,Developer
 
 打印从第一次匹配 Raj 的行到最后一行的所有行：
-[huawei@n148 sed]$ sed -n '/Raj/,$ p' employee.txt
+[huawei@n148 sed]$ sed -n '/Raj/,$p' employee.txt
 103,Raj Reddy,Sysadmin
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
 
 打印自匹配 Raj 的行开始到匹配 Jane 的行之间的所有内容：
-[huawei@n148 sed]$ sed -n '/Raj/,/Jane/ p' employee.txt
+[huawei@n148 sed]$ sed -n '/Raj/,/Jane/p' employee.txt
 103,Raj Reddy,Sysadmin
 104,Anand Ram,Developer
 105,Jane Miller,Sales Manager
 
 打印匹配 Jason 的行和其后面的两行:
-[huawei@n148 sed]$ sed -n '/Jane/,+2 p' employee.txt
+[huawei@n148 sed]$ sed -n '/Jane/,+2p' employee.txt
 105,Jane Miller,Sales Manager
 
 
@@ -1372,12 +1467,13 @@ log: input.txt
 log: testing resumed
 log:output created
 ```
-## 打印模式空间第一行 P
+
+## 打印模式空间第一行 P（大）
 ```
 见“连行”
 ```
-## 清理模式空间所有内容 d
-d命令是删除当前模式空间内容（不再传至标准输出），并放弃之后的命令，并对新读取的内容，重头执行sed。
+## 清理模式空间所有内容后继续下一轮 d
+d命令是删除当前模式空间内容，并放弃之后的命令，并继续下一轮
 
 ```
 执行完d就下一轮了，后面的np不会被执行到
@@ -2597,7 +2693,7 @@ pattern space先读入1，然后执行到n（打印模式空间的内容后，�
 5
 7
 
-如果使用了-n 选项，将没有任何输出：
+如果使用了-n 选项，将没有任何输出，参考选项-n说明
 $ sed -n n employee.txt
 
 
@@ -2635,8 +2731,8 @@ sed先读入第一行到pattern space，然后执行n命令，用第二行覆盖
 
 
 ```
-## 屏蔽sed默认输出，选项 -n
--n 参数指不自动打印pattern space内容。也可以使用—quiet,或者—silent 来代替-n，它们的作用是相同的
+## 关闭自动打印模式空间内容，选项 -n
+选项-n与命令n一起使用时候，最终不会打印模式内容，貌似使用命令n是为了读取下一行覆盖到模式空间里（详解命令n）
 ```
 两个不输出任何信息
 [huawei@n148 sed]$ seq 7|sed -n 'n'
@@ -3078,15 +3174,17 @@ sed -e '$!{h;d;}' -e x              # 当文件中只有一行时，输入空行
 sed -e '1{$q;}' -e '$!{h;d;}' -e x  # 当文件中只有一行时，显示该行
 sed -e '1{$d;}' -e '$!{h;d;}' -e x  # 当文件中只有一行时，不输出
 ```
-## 模式空间、保持空间
+## 模式空间与保持空间
 模式空间是内部维护的一个缓存，存放着读入的一行或者多行内容，处理完后会自动清空，无法保存模式空间中被处理的行，因此sed又引入了另外一个缓存空间-保持空间用于保存模式空间的内容，模式空间的内容可以复制到保持空间，同样地保持空间的内容可以复制回模式空间。sed提供了几组命令用来完成复制的工作，其它命令无法匹配也不能修改模式空间的内容。
-* 保存（Hold) h/H：将模式空间的内容覆盖或者追加到保持空间
-* 取回（Get）g/G：将保持空间的内容覆盖或者追加到模式空间
-* 交换（Exchange）x：交换模式空间和保持空间的内容
-
+## 模式覆盖 h、追加 H 到保持
+保存（Hold) h/H：将模式空间的内容覆盖或者追加到保持空间
+## 保持覆盖 g、追加 G 到模式
+取回（Get）g/G：将保持空间的内容覆盖或者追加到模式空间
+## 交换模式与保持 x
+交换（Exchange）x：交换模式空间和保持空间的内容
 交换命令比较容易理解，保存命令和取回命令都有大写和小写两种形式，这两种形式的区别是小写的是将会覆盖目的空间的内容，而大写的是将内容追加到目的空间，追加的内容和原有的内容是以\n分隔。
 
-### 基本命令 h、H、G、g、x
+## 使用h、H、G、g、x
 ```
 [huawei@n148 sed]$ cat test.txt
 1
@@ -3414,6 +3512,40 @@ ${x;s/\n/+/g;s/^+//;p} : 最后执行(因为${} )；交换保持空间和模式�
 ## 跳转到标签（循环） b t :
 类似goto，命令 b 后面可以不跟任何标签，这种情况下，它会直接跳到 sed 脚本的结尾，t见右对齐案例
 ```
+这是不循环直接b跳到下一轮的案例。分别匹配3个k，匹配到就直接b下一轮，否则d清理模式后下一轮
+[huawei@n148 sed]$ cat ll.txt
+1AAA23
+4567
+890
+
+AbcdBBBefg
+qwe
+qwe
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+[huawei@n148 sed]$ sed -e '/AAA/b' -e '/BBB/b' -e '/CCC/b' -e d ll.txt
+1AAA23
+AbcdBBBefg
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+
+
+
 执行“/3/ba”，如果匹配了3则跳转到标签:a，接着执行后面的s/$/ YES/，即在行末插入YES，否则就不跳转接着执行s/$/ NO/, 在行末插入NO。然后执行b直接结束
 
 [huawei@n148 sed]$ sed '/3/ba;s/$/ NO/;b;:a;s/$/ YES/' employee.txt
@@ -3532,6 +3664,89 @@ s命令成功替换后继续执行ta，跳转到标签a继续循环，直到向�
 1 分组1(.*[0-9])表示n个字符后跟一个数字，即匹配了123456，规则见sed贪婪匹配
 2 分组2([0-9]{3})表示三个数字
 3 s替换成功（加入，）则循环之，即从后向前3个字符加一个逗号
+```
+### 段落匹配
+```
+如果某段包含"AAA",则打印这一段。(空行用来分隔段落)
+[huawei@n148 sed]$ cat ll.txt
+1AAA23
+4567
+890
+
+AbcdBBBefg
+qwe
+qwe
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+[huawei@n148 sed]$ sed -e '/./{H;$!d;}' -e 'x;/AAA/!d;'  ll.txt
+
+1AAA23
+4567
+890
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+1 前边/./{H;$!d;}用保留一个段落。使用‘.’能够匹配有字符的行（无字符以为空行），然后H模式追加到保持中，$!d代表如果该行不是最后一行就删除模式空间的所有内容，接着读入下一个非空行（不会执行后面的x）
+2 备份整个段落到保持中使用x;/AAA/!d来查找，先x交换保持与模式，此时模式里是一个段落，然后匹配到k则不清理保持空间（会打印出），否则d掉
+
+--------------------------
+
+
+如果某段包含"AAA"和"BBB"和"CCC",则打印这一段。“/./{H;$!d;}”同上，“/AAA/!d;/BBB/!d;/CCC/!d”参考模式匹配中的案例说明
+[huawei@n148 sed]$ sed -e '/./{H;$!d;}' -e 'x;/AAA/!d;/BBB/!d;/CCC/!d'  ll.txt
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+--------------------------
+
+
+如果某段包含"AAA"或"BBB"或"CCC",则打印这一段，参考同上
+[huawei@n148 sed]$ sed -e '/./{H;$!d;}' -e 'x;/AAA/b' -e '/BBB/b' -e '/CCC/b' -e d  ll.txt
+
+1AAA23
+4567
+890
+
+AbcdBBBefg
+qwe
+qwe
+
+CCCa
+AAAa
+BBBa
+AAAa
+CCCa
+1233
+
+123AAA123BBB123CCC123
+123CCC123BBB123AAA123
+123BBB123AAA123CCC123
+
 ```
 # AWK
 规则是先模式匹配后执行动作。pattern { action }
