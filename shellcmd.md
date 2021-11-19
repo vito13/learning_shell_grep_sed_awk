@@ -4151,29 +4151,43 @@ start
 
 over
 ```
+打印未初始化的变量默认是空，参与数学运算则默认是0，字符串参与运算则默认为0
+```
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print a}'
+test
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print ++a}'
+1
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print a++}'
+0
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print b}'
+
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print b++}'
+0
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print ++b}'
+1
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print c["t"]}'
+
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print c["t"]++}'
+0
+[huawei@n148 ~]$ awk 'BEGIN{a="test"; print ++c["t"]}'
+1
+```
 ## 内置算术函数
 函数 返回值
 * atan2(y,x) y/x 的反正切值, 定义域在 −π 到 π 之间
 * cos(x) x 的余弦值, x 以弧度为单位
 * exp(x) x 的指数函数, e^x
-* int(x) x 的整数部分; 当 x 大于 0 时, 向 0 取整
 * log(x) x 的自然对数 (以 e 为底)
-* rand() 返回一个随机数 r, 0 ≤ r < 1
 * sin(x) x 的正弦值, x 以弧度为单位.
 * sqrt(x) x 的方根
-* srand(x) x 是 rand() 的新的随机数种子
 ## 内置字符串函数
 函数 描述
-* gsub(r,s) 将 $0 中所有出现的 r 替换为 s, 返回替换发生的次数.
-* gsub(r,s,t ) 将字符串 t 中所有出现的 r 替换为 s, 返回替换发生的次数
-* index(s,t) 返回字符串 t 在 s 中第一次出现的位置, 如果 t 没有出现的话, 返回 0.
-* length(s) 返回 s 包含的字符个数
+次数
+
+
 * match(s,r) 测试 s 是否包含能被 r 匹配的子串, 返回子串的起始位置或 0; 设置 RSTART 与 RLENGTH
-* split(s,a) 用 FS 将 s 分割到数组 a 中, 返回字段的个数
-* split(s,a,fs) 用 fs 分割 s 到数组 a 中, 返回字段的个数
 * sprintf(fmt,expr-list) 根据格式字符串 fmt 返回格式化后的 expr-list
-* sub(r,s) 将 $0 的最左最长的, 能被 r 匹配的子字符串替换为 s, 返回替换发生的次数.
-* sub(r,s,t) 把 t 的最左最长的, 能被 r 匹配的子字符串替换为 s, 返回替换发生的次数.
+
 * substr(s,p) 返回 s 中从位置 p 开始的后缀.
 * substr(s,p,n) 返回 s 中从位置 p 开始的, 长度为 n 的子字符串.
 
@@ -4296,6 +4310,33 @@ s
 [huawei@n148 playground]$ awk '{print NF, $1, $NF}' emp.data
 3 Beth 0
 3 Dan 0
+
+[huawei@n148 awk]$ cat test4.txt
+Allen Phillips
+Green Lee
+William Aiden James Lee
+Angle Jack
+Tyler Kevin
+Lucas Thomas
+Kevin
+
+首先是默认每行的循环，然后再for循环本行的每一列
+[huawei@n148 awk]$ awk '{for(i=1;i<=NF;i++){print $i}}'  test4.txt
+Allen
+Phillips
+Green
+Lee
+William
+Aiden
+James
+Lee
+Angle
+Jack
+Tyler
+Kevin
+Lucas
+Thomas
+Kevin
 ```
 
 ## 打印行号 NR、FNR
@@ -4791,86 +4832,60 @@ start
 3
 over
 ```
-## 排序
-下面的排序局限在只能将key放到第一列
-```
-[huawei@n148 playground]$ awk '{ printf("%6.2f %s\n", $2 * $3, $0) }' emp.data | sort -n
-  0.00 Beth 4.00 0
-  0.00 Dan 3.75 0
- 40.00 Kathy 4.00 10
- 76.50 Susie 4.25 18
-100.00 Mark 5.00 20
-121.00 Mary 5.50 22
-```
-
-
-## 计数
-if $3>15 则emp+1
-```
-[huawei@n148 playground]$ awk '$3>15 {emp=emp+1} END{print emp}' emp.data                                              3
-```
-
-## 求和与平均值
-前提是总数不为0
-```
-[huawei@n148 playground]$ awk '{pay=pay+$2*$3} END{printf("total:%.3f\naver:%.3f\n",pay,pay/NR)}' emp.data
-total:337.500
-aver:56.250
-```
-## 找最大
-max效果，只有当至少有一行的$2是正数时, 程序才是正确的
-```
-[huawei@n148 playground]$ awk '$2>maxrate{maxrate=$2;name=$1} END{printf("highest rate:%.3f\nname:%s\n",maxrate,name)}' emp.data
-highest rate:5.500
-name:Mary
-```
-## 连接字符串
-join效果
-```
-[huawei@n148 playground]$ awk '{names=names $1 " "} END{print names}' emp.data
-Beth Dan Kathy Mark Mary Susie
-```
-## 字符串length
-```
-[huawei@n148 playground]$ awk '{print $1, length($1)}' emp.data
-Beth 4
-Dan 3
-Kathy 5
-Mark 4
-```
-## 统计行数、词数、字符数
-与wc效果相同
-```
-[huawei@n148 playground]$ awk '{nc=nc+length($0)+1;nw=nw+NF} END{printf("%d lines,%d words,%d chars\n",NR,nw,nc)}' emp.data
-6 lines,18 words,77 chars
-```
-
 ## 一维数组
+awk中数组的下标默认是从1开始的
+### 创建、赋值
+元素可以赋值为空，效果同变量。即可以使用未定义的元素，值是空
 ```
 [huawei@n148 awk]$ awk 'BEGIN{a[0]=0; a[1]=1; a[2]=2; print a[1]}'
 1
-
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; print a[1]}'
 B
-
-元素可以赋值为空
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; print a[3]}'
-同变量效果。可以使用未定义的元素，也是空
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; print a[4]}'
+```
+### 检测存在 in
 不能使用判断空字符串来验证元素或变量是否存在，因为awk变量不用创建就可以使用且默认为空。。。
+```
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (a[3]=="") print "null"}'
 null
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (a[4]=="") print "null"}'
 null
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (a[100]=="") print "null"}'
 null
-可以使用in来判断元素是否存在
-[huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (100 in a) print "exist"}'
-[huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (3 in a) print "exist"}'
+
+需要使用in来判断元素是否存在
+[huawei@n148 awk]$ awk 'BEGIN{a[1]="B"; a[2]="C"; a[3]=""; if (100 in a) print "exist"}'
+[huawei@n148 awk]$ awk 'BEGIN{a[1]="B"; a[2]="C"; a[3]=""; if (3 in a) print "exist"}'
 exist
-使用！来取反
-[huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (!(100 in a)) print "not exist"}'
+
+使用！（取反）来判断不存在
+[huawei@n148 awk]$ awk 'BEGIN{a[1]="B"; a[2]="C"; a[3]=""; if (!(100 in a)) print "not exist"}'
 not exist
+```
+### 删除 delete
+删除元素与删除数组
+```
+[huawei@n148 ~]$ awk 'BEGIN{a[0]="A"; a[1]="B"; delete a[0]; print a[0]; print a[1]}'
+
+B
+[huawei@n148 ~]$ awk 'BEGIN{a[0]="A"; a[1]="B"; delete a; print a[0]; print a[1]}'
+```
+### 遍历 for
+数字下标可以按顺序遍历，字符串下标就按字典顺序了
+```
+[huawei@n148 ~]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; for(i=0;i<3;++i){print a[i]}}'
+A
+B
+C
+[huawei@n148 ~]$ awk 'BEGIN{a["A"]="A"; a["B"]="B"; a["C"]="C"; for(i in a){print a[i]}}'
+A
+B
+C
+[huawei@n148 ~]$ awk 'BEGIN{a["A1"]="A"; a["A3"]="B"; a["A5"]="C"; for(i in a){print a[i]}}'
+C
+A
+B
 ```
 
 向一个NR个元素的array依次赋值，然后循环输出，注意这里没使用[0]，是从1开始使用的
@@ -4894,9 +4909,97 @@ Dan 3.75 0
 Beth 4.00 0
 ```
 
-## 改变值
-使用逻辑比较，正则加gsub替换的两种方式
+### 文件转数组（使用文件多列）
 ```
+文件有两列
+[huawei@n148 awk]$ cat data.txt
+1 20
+25 45
+20 94
+60 30
+
+原文件第一列为k，第二列为v，每行按照a[$1]=$2放入数组，但顺序非文件行顺序
+[huawei@n148 awk]$ awk '{a[$1]=$2}END{for(i in a) print i,a[i]}' data.txt
+20 94
+1 20
+60 30
+25 45
+
+```
+### 文件转数组（使用文件单列）
+```
+文件有两列
+[huawei@n148 awk]$ cat data.txt
+1 20
+25 45
+20 94
+60 30
+
+使用原文件第二列为v，k则是递增的idx。这样遍历时候顺序与文件行一致
+
+[huawei@n148 awk]$ awk -v idx=0 '{a[idx++]=$2} END{for(i in a) print a[i],i}' data.txt
+20 0
+45 1
+94 2
+30 3
+
+[huawei@n148 awk]$ awk -v idx=0 '{a[idx++]=$2} END{for(i=0;i<4;i++) print a[i],i}' data.txt
+20 0
+45 1
+94 2
+30 3
+
+```
+## 随机数与取整 sand、rand、int
+```
+[huawei@n148 ~]$ awk 'BEGIN{srand(); for (a=0;a<3;a++){print rand()}}'
+0.0483539
+0.649787
+0.665423
+[huawei@n148 ~]$ awk 'BEGIN{srand(); for (a=0;a<3;a++){print 100*rand()}}'
+75.6052
+86.6879
+5.01419
+[huawei@n148 ~]$ awk 'BEGIN{srand(); for (a=0;a<3;a++){print int(100*rand())}}'
+68
+89
+14
+```
+## 字符串替换 sub、gsub
+sub仅可替换1次，gsub全部替换。sub和gsub的第三个参数用于指定替换哪些列。貌似返回值是替换次数（未测试。。。）
+```
+[huawei@n148 awk]$ cat test11.txt
+Allen Phillips
+Green Lee
+William Ken Allen
+
+sub仅可替换1次
+[huawei@n148 awk]$ awk '{sub("l","L"); print }' test11.txt
+ALlen Phillips
+Green Lee
+WiLliam Ken Allen
+
+
+仅替换$1，即第一列
+[huawei@n148 awk]$ awk '{gsub("l","L",$1); print $0}' test11.txt
+ALLen Phillips
+Green Lee
+WiLLiam Ken Allen
+
+默认是替换所有列，即$0
+[huawei@n148 awk]$ awk '{gsub("l","L"); print $0}' test11.txt
+ALLen PhiLLips
+Green Lee
+WiLLiam Ken ALLen
+
+还可以使用正则
+[huawei@n148 awk]$ awk '{gsub(/[a-z]/,"@"); print $0}' test11.txt
+A@@@@ P@@@@@@@
+G@@@@ L@@
+W@@@@@@ K@@ A@@@@
+
+
+如果$4是Asia则换为yazhou
 [huawei@n148 playground]$ awk  '$4 == "Asia" { $4 = "yazhou" } { print }' countries
 USSR 8649 275 yazhou
 Canada 3852 25 North America
@@ -4922,7 +5025,162 @@ France 211 55 Europe
 Japan 144 120 xxx
 Germany 96 61 Europe
 England 94 56 Europe
+
 ```
+## 字符串长度 length
+不指定参数则是计算$0的length
+```
+[huawei@n148 playground]$ awk '{print $1, length($1)}' emp.data
+Beth 4
+Dan 3
+Kathy 5
+Mark 4
+
+
+[huawei@n148 awk]$ awk '{print $0, length()}' test11.txt
+Allen Phillips 14
+Green Lee 9
+William Ken Allen 17
+
+```
+## 查找位置 index
+查找指定字符串在指定列或整行中的起始位置
+```
+[huawei@n148 awk]$ cat test11.txt
+Allen Phillips
+Green Lee
+William Ken Allen
+
+在每一行找l的位置
+[huawei@n148 awk]$ awk '{print index($0, "l")}' test11.txt
+2
+0
+3
+
+在第二列找en的位置
+[huawei@n148 awk]$ awk '{print index($2, "en")}' test11.txt
+0
+0
+2
+```
+## 字符串分割 split
+返回分割后的数组长度，注意数组的元素下标从1开始
+```
+
+[huawei@n148 awk]$ awk -v ts="qq te ab th" 'BEGIN{arrlen=split(ts,arr," "); for (i=1;i<=arrlen;++i) print arr[i]}'
+qq
+te
+ab
+th
+[huawei@n148 awk]$ awk -v ts="qq te ab th" 'BEGIN{arrlen=split(ts,arr," "); for (i in arr) print arr[i]}'
+th
+qq
+te
+ab
+
+```
+## 排序 asort
+```
+原始文件两列
+[huawei@n148 awk]$ cat data.txt
+1 20
+25 45
+20 94
+60 30
+
+将文件读入数组，转换格式是$1为数组的k，$2为数组的v
+[huawei@n148 awk]$ awk '{a[$1]=$2}END{asort(a, t); for(i in t) print i,t[i]}' data.txt
+20 94
+1 20
+60 30
+25 45
+
+[huawei@n148 awk]$ awk '{a[$1]=$2}END{for(i=1;i<=asort(a,b);i++) print i"\t"b[i]}' data.txt
+1       20
+2       30
+3       45
+4       94
+
+```
+
+
+
+下面的排序局限在只能将key放到第一列
+```
+[huawei@n148 playground]$ awk '{ printf("%6.2f %s\n", $2 * $3, $0) }' emp.data | sort -n
+  0.00 Beth 4.00 0
+  0.00 Dan 3.75 0
+ 40.00 Kathy 4.00 10
+ 76.50 Susie 4.25 18
+100.00 Mark 5.00 20
+121.00 Mary 5.50 22
+```
+
+
+## 统计
+### 简单递增
+if $3>15 则emp+1
+```
+[huawei@n148 playground]$ awk '$3>15 {emp=emp+1} END{print emp}' emp.data                                              3
+```
+### 统计文件中各字符串的出现次数
+```
+[huawei@n148 awk]$ cat test4.txt
+Allen Phillips
+Green Lee
+William Aiden James Lee
+Angle Jack
+Tyler Kevin
+Lucas Thomas
+Kevin
+
+将文件赋值到数组，首先循环遍历行的每一列，然后arr[$i]++代表如k相同则v++，end里遍历数组打印k和v
+
+[huawei@n148 awk]$ awk '{for(i=1;i<=NF;i++){arr[$i]++}} END{for(j in arr){print j,arr[j]}}' test4.txt
+Tyler 1
+Angle 1
+James 1
+Lucas 1
+William 1
+Thomas 1
+Green 1
+Jack 1
+Phillips 1
+Kevin 2
+Lee 2
+Allen 1
+Aiden 1
+
+````
+### 统计行数、词数、字符数
+与wc效果相同
+```
+[huawei@n148 playground]$ awk '{nc=nc+length($0)+1;nw=nw+NF} END{printf("%d lines,%d words,%d chars\n",NR,nw,nc)}' emp.data
+6 lines,18 words,77 chars
+```
+
+## 求和与平均值
+前提是总数不为0
+```
+[huawei@n148 playground]$ awk '{pay=pay+$2*$3} END{printf("total:%.3f\naver:%.3f\n",pay,pay/NR)}' emp.data
+total:337.500
+aver:56.250
+```
+## 找最大
+max效果，只有当至少有一行的$2是正数时, 程序才是正确的
+```
+[huawei@n148 playground]$ awk '$2>maxrate{maxrate=$2;name=$1} END{printf("highest rate:%.3f\nname:%s\n",maxrate,name)}' emp.data
+highest rate:5.500
+name:Mary
+```
+## 连接字符串
+join效果
+```
+[huawei@n148 playground]$ awk '{names=names $1 " "} END{print names}' emp.data
+Beth Dan Kathy Mark Mary Susie
+```
+
+
 
 # more，less，tail，head 查看文件内容
 # cat、tac、rev
