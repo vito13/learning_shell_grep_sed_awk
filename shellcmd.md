@@ -4139,9 +4139,23 @@ awk [options] ‘Pattern{Action}’ file
 ## 变量
 * 内置变量就是awk预定义好的、内置在awk内部的变量
 * 自定义变量就是用户定义的变量。  
+* 关于$
 ```
 在awk中，只有在引用$0、$1等内置变量的值的时候才会用到”$”,引用其他变量时，不管是内置变量，还是自定义变量，都不使用”$”,而是直接使用变量名。
 ```
+### 自定义变量
+```
+
+[huawei@n148 awk]$ awk -v v1="str1" -v v2="str2" 'BEGIN{print v1,v2}'
+str1 str2
+[huawei@n148 awk]$ awk 'BEGIN{v1="str1"; v2="str2";  print v1 v2}'
+str1str2
+[huawei@n148 awk]$ v3="str3"
+[huawei@n148 awk]$ awk -v v1=$v3 'BEGIN{print v1}'
+str3
+
+```
+### 未定义变量的使用
 如果直接使用不存在的变量，awk会自动创建这个变量，并且默认为这个变量赋值为”空字符串”，数组元素也是如此
 ```
 va不存在，连续打印了3次空
@@ -4151,6 +4165,12 @@ start
 
 over
 ```
+未定义，但正常使用的方法
+```
+[huawei@n148 awk]$ seq 10|awk '$0>5{c++} END{print c}'
+5
+```
+### 类型转换（字符串与数字）
 打印未初始化的变量默认是空，参与数学运算则默认是0，字符串参与运算则默认为0
 ```
 [huawei@n148 ~]$ awk 'BEGIN{a="test"; print a}'
@@ -4172,6 +4192,10 @@ test
 [huawei@n148 ~]$ awk 'BEGIN{a="test"; print ++c["t"]}'
 1
 ```
+
+
+
+
 ## 内置算术函数
 函数 返回值
 * atan2(y,x) y/x 的反正切值, 定义域在 −π 到 π 之间
@@ -4371,7 +4395,7 @@ FNR能解决上面的问题
 
 ```
 ## 输入列分隔符 FS （或-F）
-作用是将一行分为n个列。默认是“空格”
+作用是将一行分为n个列。默认是“空格”。也见到过直接拿FS当变量被打印的案例见分割一行排序
 ```
 不管是通过-F选项，还是通过FS这个内置变量，效果都一致
 [huawei@n148 awk]$ cat t1.txt
@@ -4422,7 +4446,7 @@ aaa+++bbb
 
 ```
 ## 输入行分隔符 RS
-作用是将整个文件分为新的n行
+作用是将整个文件分为新的n行，也见到过直接拿RS当变量被打印的案例见分割一行排序
 
 不指定RS则默认是”回车换行”，指定RS的目的是为了在读取输入文件时不按照"回车换行"作为一行，而是按照“指定的符号”将整个文件分割为若干行，此时原来的“回车换行”则会被认为是一个普通的符号存在于一行中，参见下例的“8ua”前面是没有行号的，因为它与4 ddd是同一行
 ```
@@ -4558,25 +4582,87 @@ employee.txt: 105,Jane Miller,Sales Manager
 aaa awk p1 p2 3
 ```
 
-## 自定义变量
-```
 
-[huawei@n148 awk]$ awk -v v1="str1" -v v2="str2" 'BEGIN{print v1,v2}'
-str1 str2
-[huawei@n148 awk]$ awk 'BEGIN{v1="str1"; v2="str2";  print v1 v2}'
-str1str2
-[huawei@n148 awk]$ v3="str3"
-[huawei@n148 awk]$ awk -v v1=$v3 'BEGIN{print v1}'
-str3
-
-```
-## 模式 Pattern
+## 模式Pattern
 分类：
 * 空模式
 * 关系运算模式
 * BEGIN/END模式
 * 正则模式
 * 行范围模式
+
+### 模式与动作{ }
+即awk [options] ‘Pattern{Action}’ file中的‘Pattern{Action}’部分，由此可以看出Action是要在单引号里的。
+* 模式可以理解为条件，如果当前行能与模式匹配，则会执行对应的动作
+* 如没有模式只要动作，则默认匹配成功，会每行都执行动作
+* 如只有模式没有动作，则默认匹配成功，会默认打印整行，即{print $0}。但”空模式”与”BEGIN/END模式”除外。
+* 数字0、空字符串、null(大小写组合随意)表示”假”，不执行动作，反之则为真会执行动作
+
+```
+空模式，没有pattern部分，每一行都匹配，结果都是真，每一行都会执行动作
+[huawei@n148 awk]$ seq 5|awk '{print $0}'
+1
+2
+3
+4
+5
+
+只有模式没有动作则默认动作为打印整行
+[huawei@n148 awk]$ seq 5|awk '2'
+1
+2
+3
+4
+5
+
+模式为数字1会匹配成功
+[huawei@n148 awk]$ seq 5|awk '1{print $0}'
+1
+2
+3
+4
+5
+
+模式数字0，无动作，匹配失败
+[huawei@n148 awk]$ seq 5|awk '0'
+
+模式数字0，有动作，匹配失败
+[huawei@n148 awk]$ seq 5|awk '0{print $0}'
+
+模式null匹配失败
+[huawei@n148 awk]$ seq 5|awk 'null {print $0}'
+
+模式NULL匹配失败
+[huawei@n148 awk]$ seq 5|awk 'NULL {print $0}'
+
+空字符串匹配失败
+[huawei@n148 awk]$ seq 5|awk '"" {print $0}'
+
+还能对真与假进行！取反
+[huawei@n148 awk]$ seq 5|awk '!nULL {print $0}'
+1
+2
+3
+4
+5
+
+[huawei@n148 awk]$ seq 5|awk '!0 {print $0}'
+1
+2
+3
+4
+5
+
+也可以使用变量值来决定模式的计算结果
+[huawei@n148 awk]$ seq 5|awk 'i=0'
+[huawei@n148 awk]$ seq 5|awk 'i=1'
+1
+2
+3
+4
+5
+```
+## 关系运算模式
 ```
 [huawei@n148 playground]$ awk '$2>=5 {print}' emp.data
 Mark 5.00 20
@@ -4689,7 +4775,16 @@ END {
 [huawei@n148 playground]$ awk -f t.sh emp.data
 3 emps, total: 297.5 ave:99.1667
 ```
-## if else
+## 简单判断、if else
+简单判断属于“关系运算模式”（详见关系运算模式），语法类似下面这样即可，可以省掉if
+```
+[huawei@n148 awk]$ seq 10|awk '$0>5{print $0}'
+6
+7
+8
+9
+10
+```
 关于if执行的语句体里的大括号 { } 规则与c语言一样，如果语句体是多句则需要加 { } 防止逻辑错误
 ```
 
@@ -4729,6 +4824,34 @@ f
 s
 第二行
 else
+
+```
+## 三元运算 ? :
+```
+if形式
+
+[huawei@n148 awk]$ awk -F: '{if($3<500) {usertype="系统用户"}else{usertype="普通用户"};print $1,usertype}' /etc/passwd
+root 系统用户
+bin 系统用户
+daemon 系统用户
+adm 系统用户
+lp 系统用户
+...
+
+使用？：
+[huawei@n148 awk]$ awk -F: '{usertype=$3<500?"系统用户":"普通用户";print $1,usertype}' /etc/passwd
+root 系统用户
+bin 系统用户
+daemon 系统用户
+adm 系统用户
+lp 系统用户
+...
+
+接着上面的逻辑进行用户类型的统计
+
+[huawei@n148 awk]$ awk -F: '{$3<500?sysusers++:users++} END{print "sysusers:"sysusers", users:"users}' /etc/passwd
+sysusers:30, users:22
+
 
 ```
 
@@ -5079,32 +5202,101 @@ te
 ab
 
 ```
-## 排序 asort
+## 排序 asort、asorti
+* 都是升序
+* asort是对数组的值进行排序，值的大小排列
+* asorti是对数组的下标进行排序，ascii码顺序
+* 返回值都是数组的长度
+### 分割一行排序
 ```
-原始文件两列
+[huawei@n148 awk]$ echo "8 11111 9" | awk '{for(i=1;i<=NF;i++)a[$i]=$i;for(j=1;j<=asorti(a,b);j++)printf a[b[j]] FS;printf RS;delete a}'
+11111 8 9
+
+分析：
+1 首先for将一行按列NF转为数组a
+2 使用asorti按k排序，此处8的16进制是0x38，而1是0x31，字符串比较是先比较第一个字符，那么11111就排在了8之前，尽管数值上11111比8大许多
+3 使用for打印出排序后的数组，此处分为原始数组a与新数组b，使用了a[b[j]]其中b[j]为排序后的值，然后再从a中取出对应的元素（其实可以直接print b[j]，因为a的k与v是相同的，此处有点多余）
+4 在for打印每个元素后面紧跟着的FS代表使用“输入列分割符，默认的空格”，即打印个空格，换成别的也可以
+5 完成for后，打印了RS（输入行分割符号，默认回车换行），然后删除了数组，整体结束
+6 调整一下可以看另外的样子，元素间使用\t，输出完使用回车防止[huawei@n148 awk]$连在9后面
+
+[huawei@n148 awk]$ echo "8 11111 9" | awk '{for(i=1;i<=NF;i++)a[$i]=$i;for(j=1;j<=asorti(a,b);j++)printf b[j] "\t\t\t"; printf "\n"; delete b; delete a}'
+11111                   8                       9
+
+asort是按照数值的大小来排列的
+
+echo "8 11111 9" | awk '{for(i=1;i<=NF;i++)a[$i]=$i;for(j=1;j<=asort(a);j++)printf a[j] FS;printf RS;delete a}'
+```
+
+### 读入文件排序
+
+```
+[huawei@n148 awk]$ cat file.txt
+aaa 125
+ddd 123
+bbb 128
+ccc 120
+[huawei@n148 awk]$ awk '{a[$2]=$0}END{for(i=1;i<=asort(a);i++)print a[i]}' file.txt
+aaa 125
+bbb 128
+ccc 120
+ddd 123
+[huawei@n148 awk]$ awk '{a[$2]=$0}END{for(i=1;i<=asorti(a,b);i++)print a[b[i]]}' file.txt
+ccc 120
+ddd 123
+aaa 125
+bbb 128
+```
+### 第二个参数的作用
+```
 [huawei@n148 awk]$ cat data.txt
 1 20
 25 45
 20 94
 60 30
 
-将文件读入数组，转换格式是$1为数组的k，$2为数组的v
-[huawei@n148 awk]$ awk '{a[$1]=$2}END{asort(a, t); for(i in t) print i,t[i]}' data.txt
-20 94
-1 20
-60 30
-25 45
+
+通过asort函数对数组排序后，再次输出数组中的元素时，已经按照元素的值的大小进行了排序，但是，数组的下标也被重置为了纯数字
+
+[huawei@n148 awk]$ awk '{a[$1]=$2}END{for(i=1;i<=asort(a);i++) print i"\t"a[i]}' data.txt
+1       20
+2       30
+3       45
+4       94
+------------------------------------------
+
+
+asort还有一种用法，就是在对原数组元素值排序的同时，创建一个新的数组，将排序后的元素放置在新数组中，这样能够保持原数组不做任何改变，我们只要打印新数组中的元素值，即可输出排序后的元素值
+
+[huawei@n148 awk]$ awk '{a[$1]=$2} END{for(i=1;i<=asort(a,b);i++) print i"\t"b[i]; print "---"; for(i in a) print i"\t"a[i]}' data.txt
+1       20
+2       30
+3       45
+4       94
+---
+20      94
+1       20
+60      30
+25      45
+
+------------------------------------------
+
+
+直接使用排序后的新数组：将文件读入数组，转换格式是$1为数组的k，$2为数组的v
 
 [huawei@n148 awk]$ awk '{a[$1]=$2}END{for(i=1;i<=asort(a,b);i++) print i"\t"b[i]}' data.txt
 1       20
 2       30
 3       45
 4       94
-
+[huawei@n148 awk]$ awk '{a[$1]=$2}END{len = asort(a, t); for(i=1;i<=len;++i) print i"\t"t[i]}' data.txt
+1       20
+2       30
+3       45
+4       94
 ```
 
-
-
+### 使用外部命令 sort
 下面的排序局限在只能将key放到第一列
 ```
 [huawei@n148 playground]$ awk '{ printf("%6.2f %s\n", $2 * $3, $0) }' emp.data | sort -n
@@ -5179,7 +5371,19 @@ join效果
 [huawei@n148 playground]$ awk '{names=names $1 " "} END{print names}' emp.data
 Beth Dan Kathy Mark Mary Susie
 ```
+## 打印奇偶行
+```
+1 这里省略了动作，即打印整行。
+2 其实就是对一个变量进行不断的取反，让其一直t与f间切换，用于决定是否执行打印整行
 
+[huawei@n148 awk]$ seq 5|awk '!(i=!i)'
+2
+4
+[huawei@n148 awk]$ seq 5|awk 'i=!i'
+1
+3
+5
+```
 
 
 # more，less，tail，head 查看文件内容
