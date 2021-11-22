@@ -4137,6 +4137,9 @@ awk [options] ‘Pattern{Action}’ file
 * Action（动作）：我们使用过print与printf
 * Pattern（模式）：如BEGIN、END，空模式、关系运算、正则、行范围
 ## 变量
+* awk 变量可以直接使用而不需事先声明
+* 如果要初始化变量，最好在BEGIN 区域内作，它只会执行一次。
+* Awk 中没有数据类型的概念，一个 awk 变量是 number 还是 string 取决于该变量所处的上下文。
 * 内置变量就是awk预定义好的、内置在awk内部的变量
 * 自定义变量就是用户定义的变量。  
 * 关于$
@@ -4169,6 +4172,11 @@ over
 ```
 [huawei@n148 awk]$ seq 10|awk '$0>5{c++} END{print c}'
 5
+
+打印最大的 UID 和其所在的行
+[huawei@n148 awk]$ awk -F ':' '$3 > maxuid { maxuid = $3; maxline = $0 } END { print maxuid,maxline }' /etc/passwd
+65534 nfsnobody:x:65534:65534:Anonymous NFS User:/var/lib/nfs:/sbin/nologin
+
 ```
 ### 类型转换（字符串与数字）
 打印未初始化的变量默认是空，参与数学运算则默认是0，字符串参与运算则默认为0
@@ -4229,6 +4237,12 @@ Susie 4.25 18
 [huawei@n148 playground]$ awk '{print}' emp.data
 [huawei@n148 playground]$ awk '{print $0}' emp.data
 ```
+## 最后一行
+在 END 里 NR 的值会被保留下来，但是 $0 不会，需要通过用户变量存储。
+```
+[huawei@n148 awk]$ awk '{last=$0} END{print last}' emp.data
+Susie 4.25 18
+```
 ## 指定列 $1, $2...
 默认输出是空格间隔，可以单独去设置
 ```
@@ -4252,7 +4266,7 @@ Use%
 100%
 ```
 
-## 格式化输出
+## 拼文本、格式化输出
 将自己的字段与文件中的列结合起来
 ```
 [huawei@n148 awk]$ df|awk '{print "use:\t" $5}'
@@ -4276,12 +4290,15 @@ total pay for Mark is 100
 total pay for Mary is 121
 total pay for Susie is 76.5
 ```
-## 打印计算结果
+## 列计算
 ```
 [huawei@n148 playground]$ awk '{print $1, $2*$3}' emp.data
 ```
 ## 使用 printf
-printf需要知道值的具体类型才行，print则更像是泛型
+* printf 不会使用 OFS 和 ORS，它只根据”format”里面的格式打印数据。
+* printf需要指定值的输出类型，print则更像是泛型
+* 可以指定打印列的宽度（见例）
+
 ```
 [huawei@n148 playground]$ awk '{ printf("total pay for %s is $%.2f\n", $1, $2 * $3) }' emp.data
 total pay for Mark is $100.00
@@ -4292,6 +4309,33 @@ total pay for Susie is $76.50
 Mark     $100.00
 Mary     $121.00
 Susie    $ 76.50
+
+
+在左边补空格,把字符串”Good”打印成 6 个字符
+[huawei@n148 awk]$ awk 'BEGIN { printf "%6s\n","Good" }'
+  Good
+
+
+指定宽度为 6，但仍然输出所有字符:
+[huawei@n148 awk]$ awk 'BEGIN { printf "%6s\n", "Good Boy!" }'
+Good Boy!
+
+以绝对宽度打印字符串
+[huawei@n148 awk]$ awk 'BEGIN { printf "%.6s\n", "Good Boy!" }'
+Good B
+[huawei@n148 awk]$ awk 'BEGIN { printf "%6s\n", substr("Good Boy!",1,6) }'
+Good B
+
+
+右对齐
+[huawei@n148 awk]$ awk 'BEGIN { printf "|%6s|\n", "Good" }'
+|  Good|
+
+左对齐
+[huawei@n148 awk]$ awk 'BEGIN { printf "|%-6s|\n", "Good" }'
+|Good  |
+
+
 ```
 ## 复合语句 { }  { }
 ```
@@ -4363,7 +4407,8 @@ Thomas
 Kevin
 ```
 
-## 打印行号 NR、FNR
+## 打印行号（总行数） NR、FNR
+用于 END 区域时，代表输入文件的总记录数
 ```
 [huawei@n148 playground]$ awk '{print NR,$0}' emp.data
 1 Beth 4.00 0
@@ -4395,25 +4440,62 @@ FNR能解决上面的问题
 
 ```
 ## 输入列分隔符 FS （或-F）
-作用是将一行分为n个列。默认是“空格”。也见到过直接拿FS当变量被打印的案例见分割一行排序
+作用是将一行分为n个列。默认是“空格”。FS 只能在 BEGIN 区域中使用。
+也见到过直接拿FS当变量被打印的案例见分割一行排序
 ```
-不管是通过-F选项，还是通过FS这个内置变量，效果都一致
+
 [huawei@n148 awk]$ cat t1.txt
 aaa#bbb#ccc#ddd
 123#asdf#1#af
 
-[huawei@n148 awk]$ awk -F# '{print $1,  $2}' t1.txt
-aaa bbb
-123 asdf
-
+不管是通过-F选项，还是通过FS这个内置变量，结果都一致
 [huawei@n148 awk]$ awk -v FS='#' '{print $1,  $2}' t1.txt
 aaa bbb
 123 asdf
 
+当字段分隔符是单个字符时，下面的所有写法都是对的，即可以把它放在单引号或双引号中，或者不使用引号：
+[huawei@n148 awk]$ awk -F# '{print $1,  $2}' t1.txt
+aaa bbb
+123 asdf
+[huawei@n148 awk]$ awk -F'#' '{print $1,  $2}' t1.txt
+aaa bbb
+123 asdf
+[huawei@n148 awk]$ awk -F"#" '{print $1,  $2}' t1.txt
+aaa bbb
+123 asdf
 
+-------------------------------
 [huawei@n148 awk]$ awk -v FS="#" '{printf "第一列:%s\t第二列:%s\n", $1, $2}' t1.txt
 第一列:aaa      第二列:bbb
 第一列:123      第二列:asdf
+
+-------------------------------
+
+FS 只能在 BEGIN 区域中使用
+[huawei@n148 awk]$ awk 'BEGIN {FS=","} {print $2,$3}' employee.txt
+John Doe CEO
+Jason Smith IT Manager
+Raj Reddy Sysadmin
+Anand Ram Developer
+Jane Miller Sales Manager
+
+-------------------------------
+
+当包含多个字段分隔符的文件时，FS也支持正则
+
+[huawei@n148 awk]$ cat employee-multiple-fs.txt
+101,John Doe:CEO%10000
+102,Jason Smith:IT Manager%5000
+103,Raj Reddy:Sysadmin%4500
+104,Anand Ram:Developer%4500
+105,Jane Miller:Sales Manager%3000
+
+[huawei@n148 awk]$ awk 'BEGIN {FS="[,:%]"} {print $2,$3}' employee-multiple-fs.txt
+John Doe CEO
+Jason Smith IT Manager
+Raj Reddy Sysadmin
+Anand Ram Developer
+Jane Miller Sales Manager
 
 ```
 
@@ -4428,7 +4510,7 @@ Use%+++Mounted
 0%+++/sys/fs/cgroup
 63%+++/
 
-注意观察下面2个$1与$2之间逗号的效果，之间没有逗号则连一起输出
+注意观察下面2个$1与$2之间逗号的效果(有逗号会使用OFS)，之间没有逗号则连一起输出（因为空格是连接字符串的操作符。。。）
 [huawei@n148 awk]$ awk -v FS='#'  '{print $1,  $2}' t1.txt
 aaa bbb
 123 asdf
@@ -4483,89 +4565,10 @@ ORS默认也是”回车换行”，如果指定为其他符号，输出完一�
 +++[huawei@n148 awk]$
 
 ```
-## 页眉BEGIN 与 页脚END
-* BEGIN 模式指定了处理文本之前需要执行的操作
-* END 模式指定了处理完所有行之后所需要执行的操作
-  
-### 简单使用
-```
-只打印BEGIN
-[huawei@n148 awk]$ awk 'BEGIN{print "c1", "c2"}'
-c1 c2
-
-再加上内容
-[huawei@n148 awk]$ df|awk 'BEGIN{print "c1", "c2"} {print $5,$6}'
-c1 c2
-Use% Mounted
-0% /dev
-1% /dev/shm
-9% /run
-0% /sys/fs/cgroup
-63% /
-24% /boot
-
-再加END
-[huawei@n148 awk]$ df|awk 'BEGIN{print "c1", "c2"} {print $5,$6} END{print "e1", "e2"}'
-c1 c2
-Use% Mounted
-0% /dev
-1% /dev/shm
-9% /run
-e1 e2
-
-
-[huawei@n148 awk]$ awk -v FS=":" 'BEGIN{printf "%-10s\t %s\n", "用户名称","用户id"}{printf "%-10s\t %s\n", $1, $3}' /etc/passwd
-用户名称         用户id
-root             0
-bin              1
-daemon           2
-adm              3
-lp               4
-sync             5
-shutdown         6
-halt             7
-mail             8
-operator         11
-games            12
-ftp              14
-nobody           99
-systemd-network  192
-
-```
-### 完整报表案例
-注意 print "" 打印一个空行, 它与一个单独的 print 并不相同, 后者打印当前行.
-```
-#!/bin/bash 
-BEGIN {
-  printf("%10s %6s %5s %s", "COUNTRY", "AREA", "POP", "CONTINENT")
-  printf("\n\n")
-}
-{ 
-  printf("%10s %6d %5d %s\n", $1, $2, $3, $4)
-  area = area + $2
-  pop = pop + $3
-}
-END { printf("\n%10s %6d %5d\n", "TOTAL", area, pop) }
-
-[huawei@n148 playground]$ awk -f t.sh countries
-   COUNTRY   AREA   POP CONTINENT
-
-      USSR   8649   275 Asia
-    Canada   3852    25 North
-     China   3705  1032 Asia
-       USA   3615   237 North
-    Brazil   3286   134 South
-     India   1267   746 Asia
-    Mexico    762    78 North
-    France    211    55 Europe
-     Japan    144   120 Asia
-   Germany     96    61 Europe
-   England     94    56 Europe
-
-     TOTAL  25681  2819
-```
 
 ## 文件名 FILENAME
+如果 awk 从标准输入获取内容，FILENAME 的值将会是“-”。注意:在 BEGIN 区域内，FILENAME 的值是空，因为 BEGIN 区域只针对 awk 本身，而不处理任
+何文件。
 ```
 [huawei@n148 awk]$ awk '{ print FILENAME ": " $0 }' employee.txt
 employee.txt: 101,John Doe,CEO
@@ -4574,7 +4577,38 @@ employee.txt: 103,Raj Reddy,Sysadmin
 employee.txt: 104,Anand Ram,Developer
 employee.txt: 105,Jane Miller,Sales Manager
 ```
+## 连接字符串 (空格)
+(空格)是连接字符串的操作符
 
+```
+[huawei@n148 awk]$ cat string.awk
+BEGIN {
+ FS=",";
+ OFS=",";
+ string1="Audio";
+ string2="Video";
+ numberstring="100";
+ string3=string1 string2;
+ print "Concatenate string is:" string3;
+ numberstring=numberstring+1;
+ print "String to number:" numberstring;
+}
+
+[huawei@n148 awk]$ cat items.txt
+101,HD Camcorder,Video,210,10
+102,Refrigerator,Appliance,850,2
+103,MP3 Player,Audio,270,15
+104,Tennis Racket,Sports,190,20
+105,Laser Printer,Office,475,5
+
+[huawei@n148 awk]$ awk -f string.awk items.txt
+Concatenate string is:AudioVideo
+String to number:101
+
+这个案例也解释了为什么在打印多个变量时，如果要使用 OFS 分隔每个字段，就需要
+在 print 语句中用逗号分隔每个变量。如果没有使用逗号分隔，那么会把所有值连接成一个字符串。
+
+```
 ## ARGV、ARGC
 简单使用，复杂的还没研究
 ```
@@ -4662,7 +4696,8 @@ aaa awk p1 p2 3
 4
 5
 ```
-## 关系运算模式
+### 关系运算模式
+只用于模式部分中，类似的if只能用于动作中，这是这2个的区别
 ```
 [huawei@n148 playground]$ awk '$2>=5 {print}' emp.data
 Mark 5.00 20
@@ -4675,8 +4710,18 @@ Susie 4.25 18
 Susie 4.25 18
 ```
 关系运算符 https://www.zsythink.net/archives/1426
+### 模式的组合 && || !
+模式可以使用逻辑运算符（&&, ||, 和 !,）进行组合，例如 $2 >= 4 || $3 >= 20
+```
+[huawei@n148 awk]$ awk ' $2 >= 4 || $3 >= 20 { printf("%.2f for %s\n"),$2*$3,$1 }' emp.data
+0.00 for Beth
+40.00 for Kathy
+100.00 for Mark
+121.00 for Mary
+76.50 for Susie
 
-## 使用正则
+```
+### 使用正则
 * 在awk命令中，正则表达式被放入了两个斜线中
 * 判断x匹配正则的语法：	x~/reg/  见下例
 * 判断x不匹配正则的语法： x!~/reg/  见下例
@@ -4741,7 +4786,7 @@ Reddy,Sysadmin 103,Raj
 Miller,Sales 105,Jane
 
 ```
-## 使用行范围
+### 使用行范围
 * 使用正则匹配，第一段正则是start，第二段是end，应是毕区间，即[start,end]
   
 ![开闭区间](https://bkimg.cdn.bcebos.com/pic/b7fd5266d0160924d12bf501d60735fae6cd3499?x-bce-process=image/resize,m_lfit,w_268,limit_1/format,f_auto)
@@ -4758,8 +4803,125 @@ Miller,Sales 105,Jane
 104,Anand Ram,Developer
 
 ```
+### BEGIN、END
+有两个特殊的模式 BEGIN 和 END。
+* BEGIN 模式指定了处理文本之前需要执行的操作。适合用来打印报文头部信息，以及用来初始化变量。可以有一个或多个 awk 命令。必须要用大写。是可选的
+* END 模式指定了处理完所有行之后所需要执行的操作。适合打印报文结尾信息，以及做一些清理动作。可以有一个或多个 awk 命令。必须要用大写。是可选的
 
-## awk脚本 -f
+
+
+  
+BEGIN 与END 分别提供了一种控制初始化与扫尾的方式，BEGIN 与 END 不能与其他模式作组合。如果有多个 BEGIN，会按照它们在程序中出现的顺序执行，多个 END 同样适用。
+
+
+
+```
+BEGIN的一个常见用途是更改输入行的分隔符，分隔符由内建变量FS 控制，默认由空格分割（FS=' '）。将 FS设置为什么值，就会使其成为字段分隔符。如下将FS设置为了\t，则打印中的空格被换为了\t
+
+[huawei@n148 awk]$ awk 'BEGIN{FS="\t";printf("%10s %10s\n\n","COUNTRY","AREA")}'
+   COUNTRY       AREA
+```
+
+
+
+简单使用
+```
+只打印BEGIN
+[huawei@n148 awk]$ awk 'BEGIN{print "c1", "c2"}'
+c1 c2
+
+再加上内容
+[huawei@n148 awk]$ df|awk 'BEGIN{print "c1", "c2"} {print $5,$6}'
+c1 c2
+Use% Mounted
+0% /dev
+1% /dev/shm
+9% /run
+0% /sys/fs/cgroup
+63% /
+24% /boot
+
+再加END
+[huawei@n148 awk]$ df|awk 'BEGIN{print "c1", "c2"} {print $5,$6} END{print "e1", "e2"}'
+c1 c2
+Use% Mounted
+0% /dev
+1% /dev/shm
+9% /run
+e1 e2
+
+
+[huawei@n148 awk]$ awk -v FS=":" 'BEGIN{printf "%-10s\t %s\n", "用户名称","用户id"}{printf "%-10s\t %s\n", $1, $3}' /etc/passwd
+用户名称         用户id
+root             0
+bin              1
+daemon           2
+adm              3
+lp               4
+sync             5
+shutdown         6
+halt             7
+mail             8
+operator         11
+games            12
+ftp              14
+nobody           99
+systemd-network  192
+
+```
+完整报表案例  
+注意 print "" 打印一个空行, 它与一个单独的 print 并不相同, 后者打印当前行.
+```
+#!/bin/bash 
+BEGIN {
+  printf("%10s %6s %5s %s", "COUNTRY", "AREA", "POP", "CONTINENT")
+  printf("\n\n")
+}
+{ 
+  printf("%10s %6d %5d %s\n", $1, $2, $3, $4)
+  area = area + $2
+  pop = pop + $3
+}
+END { printf("\n%10s %6d %5d\n", "TOTAL", area, pop) }
+
+[huawei@n148 playground]$ awk -f t.sh countries
+   COUNTRY   AREA   POP CONTINENT
+
+      USSR   8649   275 Asia
+    Canada   3852    25 North
+     China   3705  1032 Asia
+       USA   3615   237 North
+    Brazil   3286   134 South
+     India   1267   746 Asia
+    Mexico    762    78 North
+    France    211    55 Europe
+     Japan    144   120 Asia
+   Germany     96    61 Europe
+   England     94    56 Europe
+
+     TOTAL  25681  2819
+```
+
+## 多个输入文件
+这里使用了两次相同的文件，可以看出是多个文件依次进行处理的
+```
+[huawei@n148 awk]$ awk '$3 == 0 { print $1 }' emp.data emp.data
+Beth
+Dan
+Beth
+Dan
+
+```
+## 读取终端输入
+会将program应用到在终端输入的内容，直到输入文件结束标志 (ctrl+d)
+```
+[huawei@n148 awk]$ awk '$3 == 0 { print $1 }'
+a 4 0
+a
+b 5 10
+```
+
+## 将awk程序放入文件 -f
 放在脚本里的演示
 ```
 #!/bin/bash 
@@ -4775,8 +4937,48 @@ END {
 [huawei@n148 playground]$ awk -f t.sh emp.data
 3 emps, total: 297.5 ave:99.1667
 ```
+## 输出到文件
+* 把print语句打印的内容重定向到指定的文件中
+```
+[huawei@n148 awk]$ cat printf-width4.awk
+BEGIN {
+ FS=","
+ printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty" > "report.txt"
+ printf "---------------------------------------------------------------------\n" >> "report.txt"
+}
+{
+  if($5 > 10)
+   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5 >> "report.txt"
+}
+[huawei@n148 awk]$ awk -f printf-width4.awk items.txt
+[huawei@n148 awk]$ cat report.txt
+Num     Description     Type            Price   Qty
+---------------------------------------------------------------------
+103     MP3 Player      Audio           $270.00 015
+104     Tennis Racket   Sports          $190.00 020
+```
+* 执行 awk 脚本时使用重定向
+```
+[huawei@n148 awk]$ cat printf-width4.awk
+BEGIN {
+ FS=","
+ printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty"
+ printf "---------------------------------------------------------------------\n"
+}
+{
+  if($5 > 10)
+   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5
+}
+[huawei@n148 awk]$ awk -f printf-width4.awk items.txt >report.txt
+[huawei@n148 awk]$ cat report.txt
+Num     Description     Type            Price   Qty
+---------------------------------------------------------------------
+103     MP3 Player      Audio           $270.00 015
+104     Tennis Racket   Sports          $190.00 020
+
+```
 ## 简单判断、if else
-简单判断属于“关系运算模式”（详见关系运算模式），语法类似下面这样即可，可以省掉if
+简单判断属于“关系运算模式”（详见关系运算模式），语法类似下面这样即可，只可用于模式中
 ```
 [huawei@n148 awk]$ seq 10|awk '$0>5{print $0}'
 6
@@ -4785,7 +4987,7 @@ END {
 9
 10
 ```
-关于if执行的语句体里的大括号 { } 规则与c语言一样，如果语句体是多句则需要加 { } 防止逻辑错误
+if else只能用在Action部分。关于if执行的语句体里的大括号 { } 规则与c语言一样，如果语句体是多句则需要加 { } 防止逻辑错误。
 ```
 
 [huawei@n148 awk]$ awk '{print $1,$2}' test6.txt
@@ -4797,6 +4999,11 @@ s f
 [huawei@n148 awk]$ awk '{if (NR==1) {print $2; print $1}}' test6.txt
 s
 f
+
+更多的条件使用（）
+[huawei@n148 awk]$ awk -F ',' '{ if (($4 >= 500 && $4<= 1000) && ($5 <= 5)) print "Only",$5,"qty of",$2,"is available" }' items.txt
+Only 2 qty of Refrigerator is available
+
 
 不加{}因为就一句打印
 [huawei@n148 awk]$ awk '{if (NR==1) print $2,$1}' test6.txt
@@ -4926,7 +5133,7 @@ Susie 4.25 18
 4
 ```
 ## exit、next
-当awk中使用了END模式时，如果执行了exit语句，那么exit语句之后的所有动作都将不会再被执行，END模式中的动作除外。
+exit 命令立即停止脚本的运行，并忽略脚本中其余的命令。exit 命令接受一个数字参数最为 awk 的退出状态码，如果不提供参数，默认的状态码是 0。当awk中有END模式时，如果body里有exit，那么body里exit语句之后的所有动作将不再执行，但END里的动作会执行。见下面的案例
 ```
 [huawei@n148 awk]$ seq 3|awk 'BEGIN{print "start"} {print $0} END{print "over"}'
 start
@@ -4955,8 +5162,47 @@ start
 3
 over
 ```
-## 一维数组
-awk中数组的下标默认是从1开始的
+## 数组
+Awk 的数组，都是关联数组，即一个数组包含多个”索引/值”的元素。索引没必要是一系列连续的数字，实际上，它可以使字符串或者数字，并且不需要指定数组长度。  
+
+下面的案例：
+* 数组索引没有顺序，甚至没有从 0 或 1 开始，而是直接从 101….105 开始,然后直接跳到 1001，又降到 55，还有一个字符串索引”na”
+* 数组索引可以是字符串，数组的最后一个元素就是字符串索引，即”na”
+* Awk 中在使用数组前，不需要初始化甚至定义数组，也不需要指定数组的长度。
+* Awk 数组的命名规范和 awk 变量命名规范相同。
+* 以 awk 的角度来说，数组的索引通常是字符串，即是你使用数组作为索引，awk 也会当
+做字符串来处理。下面的写法是等价的：  
+Item[101]=”HD Camcorder”  
+Item[“101”]=”HD Camcorder”
+
+```
+[huawei@n148 awk]$ cat array-assign.awk
+BEGIN {
+ item[101]="HD Camcorder";
+ item[102]="Refrigerator";
+ item[103]="MP3 Player";
+ item[104]="Tennis Racket";
+ item[105]="Laser Printer";
+ item[1001]="Tennis Ball";
+ item[55]="Laptop";
+ item["na"]="Not Available";
+ print item["101"];
+ print item[102];
+ print item["103"];
+ print item[104];
+ print item["105"];
+ print item[1001];
+ print item["na"];
+}
+[huawei@n148 awk]$ awk -f array-assign.awk
+HD Camcorder
+Refrigerator
+MP3 Player
+Tennis Racket
+Laser Printer
+Tennis Ball
+Not Available
+```
 ### 创建、赋值
 元素可以赋值为空，效果同变量。即可以使用未定义的元素，值是空
 ```
@@ -4968,8 +5214,9 @@ B
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; print a[4]}'
 ```
 ### 检测存在 in
-不能使用判断空字符串来验证元素或变量是否存在，因为awk变量不用创建就可以使用且默认为空。。。
+如果访问一个不存在的数组元素，awk 会自动以访问时指定的索引建立该元素，并赋予null 值。为了避免这种情况，在使用前最后检测元素是否存在。不能使用判断空字符串来验证元素或变量是否存在，因为awk变量不用创建就可以使用且默认为空（null）。。。
 ```
+错误的方式
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (a[3]=="") print "null"}'
 null
 [huawei@n148 awk]$ awk 'BEGIN{a[0]="A"; a[1]="B"; a[2]="C"; a[3]=""; if (a[4]=="") print "null"}'
@@ -4987,8 +5234,10 @@ exist
 not exist
 ```
 ### 删除 delete
-删除元素与删除数组
+使用 delete 语句。一旦删除了某个元素，就再也获取不到它的值了。如item[103]="" 并没有删除整个元素，仅仅是给它赋了 null 值。
 ```
+删除元素与删除数组
+
 [huawei@n148 ~]$ awk 'BEGIN{a[0]="A"; a[1]="B"; delete a[0]; print a[0]; print a[1]}'
 
 B
@@ -5031,7 +5280,97 @@ Kathy 4.00 10
 Dan 3.75 0
 Beth 4.00 0
 ```
+### 多维数组
+虽然 awk 只支持一维数组，但其奇妙之处在于，可以使用一维数组来模拟多维数组
+```
+[huawei@n148 awk]$ cat array-multi.awk
+BEGIN {
+ item["1,1"]=10;
+ item["1,2"]=20;
+ item["2,1"]=30;
+ item["2,2"]=40
+ for (x in item)
+ print item[x]
+}
+[huawei@n148 awk]$ awk -f array-multi.awk
+10
+20
+30
+40
 
+即使使用了”1,1”作为索引值，它也不是两个索引，仍然是单个字符串索引，值为”1,1”。所以实际上是把 10 赋给一维数组中索引”1,1”代表的值。
+```
+
+
+```
+把索引外面的引号去掉，仍然可以运行，但是结果有所不同。在多维数组中，如果没有把下标用引号引住，当指定元素 item[1,2]时，它会被转换为 item[“1\0342”]。Awk 用把两个下标用”\034”连接起来并转换为字符串。
+
+[huawei@n148 awk]$ cat array-multi.awk
+BEGIN {
+ item[1,1]=10;
+ item[1,2]=20;
+ item[2,1]=30;
+ item[2,2]=40
+ for (x in item)
+ print item[x]
+}
+
+[huawei@n148 awk]$ awk -f array-multi.awk
+30
+40
+10
+20
+```
+### 多维数组下标分隔符 SUBSEP
+使用多维数组时，最好不要向上例那样给索引值加引号。通过变量 SUBSEP 可以把默认的下标分隔符改成任意字符
+```
+[huawei@n148 awk]$ cat d1.awk
+BEGIN {
+for (i = 1; i <= 2; i++)
+   for (j = 1; j <= 3; j++)
+   {
+     array[i,j] = i * j * 10
+   }
+for (x in array)
+{
+   print x, array[x]
+}
+}
+
+[huawei@n148 awk]$ awk -f d1.awk
+21 20
+22 40
+23 60
+11 10
+12 20
+13 30
+
+其实是创建了一维数组，下标分别为1SUBSEP1, 1SUBSEP2,1SUBSEP3,2SUBSEP1,2SUBSEP2,2SUBSEP3。由于SUBSEP默认是'\034',不可打印，所以输出的第一列是2个数字连在了一起。在BEGIN里加入SUBSEP = ":"后再次运行输出结果如下
+
+[huawei@n148 awk]$ cat d1.awk
+BEGIN {
+SUBSEP = ":"
+for (i = 1; i <= 2; i++)
+   for (j = 1; j <= 3; j++)
+   {
+     array[i,j] = i * j * 10
+   }
+for (x in array)
+{
+   print x, array[x]
+}
+}
+
+
+[huawei@n148 awk]$ awk -f d1.awk
+1:1 10
+1:2 20
+1:3 30
+2:1 20
+2:2 40
+2:3 60
+
+```
 ### 文件转数组（使用文件多列）
 ```
 文件有两列
@@ -5204,9 +5543,10 @@ ab
 ```
 ## 排序 asort、asorti
 * 都是升序
-* asort是对数组的值进行排序，值的大小排列
+* asort是对数组的值进行排序
 * asorti是对数组的下标进行排序，ascii码顺序
 * 返回值都是数组的长度
+* 如果不使用第二个参数，数组原始的索引值就不复存在了。排序后使用从1开始的新索引值，原先的索引被覆盖掉了
 ### 分割一行排序
 ```
 [huawei@n148 awk]$ echo "8 11111 9" | awk '{for(i=1;i<=NF;i++)a[$i]=$i;for(j=1;j<=asorti(a,b);j++)printf a[b[j]] FS;printf RS;delete a}'
@@ -5361,12 +5701,13 @@ aver:56.250
 ## 找最大
 max效果，只有当至少有一行的$2是正数时, 程序才是正确的
 ```
+
 [huawei@n148 playground]$ awk '$2>maxrate{maxrate=$2;name=$1} END{printf("highest rate:%.3f\nname:%s\n",maxrate,name)}' emp.data
 highest rate:5.500
 name:Mary
 ```
-## 连接字符串
-join效果
+
+## 把一列改成一行
 ```
 [huawei@n148 playground]$ awk '{names=names $1 " "} END{print names}' emp.data
 Beth Dan Kathy Mark Mary Susie
