@@ -4205,13 +4205,13 @@ test
 
 
 ## 内置算术函数
-函数 返回值
+以下的不常用，常用的都有单个的案例
 * atan2(y,x) y/x 的反正切值, 定义域在 −π 到 π 之间
 * cos(x) x 的余弦值, x 以弧度为单位
 * exp(x) x 的指数函数, e^x
 * log(x) x 的自然对数 (以 e 为底)
 * sin(x) x 的正弦值, x 以弧度为单位.
-* sqrt(x) x 的方根
+* sqrt(x) x 的平方根
 ## 内置字符串函数
 函数 描述
 次数
@@ -4220,9 +4220,72 @@ test
 * match(s,r) 测试 s 是否包含能被 r 匹配的子串, 返回子串的起始位置或 0; 设置 RSTART 与 RLENGTH
 * sprintf(fmt,expr-list) 根据格式字符串 fmt 返回格式化后的 expr-list
 
-* substr(s,p) 返回 s 中从位置 p 开始的后缀.
-* substr(s,p,n) 返回 s 中从位置 p 开始的, 长度为 n 的子字符串.
+## 运行分析器 pgawk
+pgawk 程序用来生成 awk执行的结果报告。用 pgawk 可以看到 akw每次执行了多少条语句(以及用户自定义的函数)。
 
+```
+首先建立下面的 awk 脚本作为样本，以供 pgawk 执行，然后分析其结果。
+
+[huawei@n148 awk]$ cat profiler.awk
+BEGIN {
+ FS=",";
+ print "Report Generate On:",strftime("%a %b %d %H:%M:%S %Z %Y",systime());
+}
+{
+if ( $5 <= 5 )
+  print "Buy More: Order",$2,"immediately!"
+else
+  print "Sell More: Give discount on",$2,"immediately!"
+}
+END {
+ print "----------"
+}
+
+
+
+接下来使用 pgawk(不是直接调用 awk)来执行该样本脚本。使用—profier 选项可以指定输出文件名。不指定“--profile=myprofiler.out”默认会创建输出文件 profier.out(或者 awkprof.out)，
+
+[huawei@n148 awk]$ pgawk --profile=myprofiler.out -f profiler.awk items.txt
+Report Generate On: Sun Nov 21 22:13:08 CST 2021
+Sell More: Give discount on HD Camcorder immediately!
+Buy More: Order Refrigerator immediately!
+Sell More: Give discount on MP3 Player immediately!
+Sell More: Give discount on Tennis Racket immediately!
+Buy More: Order Laser Printer immediately!
+----------
+
+
+查看默认的输出文件 myprofiler.out来弄清楚每条单独的 awk 语句的执行次数。
+[huawei@n148 awk]$ cat myprofiler.out
+        # gawk profile, created Sun Nov 21 22:13:08 2021
+
+        # BEGIN block(s)
+
+        BEGIN {
+     1          FS = ","
+     1          print "Report Generate On:", strftime("%a %b %d %H:%M:%S %Z %Y", systime())
+        }
+
+        # Rule(s)
+
+     5  {
+     5          if ($5 <= 5) { # 2
+     2                  print "Buy More: Order", $2, "immediately!"
+     3          } else {
+     3                  print "Sell More: Give discount on", $2, "immediately!"
+                }
+        }
+
+        # END block(s)
+
+        END {
+     1          print "----------"
+        }
+
+查看 out 文件时
+1 左侧一列有一个数字，标识着该 awk 语句执行的次数。如 BEGIN 区域里的 print 语句仅执行了一次。而 while 循环执行了 5 次。
+2 对于任意一个条件判断语句，左边有一个数字，括号右边也有一个数字。左边数字代表该判断语句执行了多少次，右边数字代表判断语句为 true 的次数。上面的例子中，由(# 2)可以判定，if 语句执行了 5 次，但只有 2 次为 true。
+```
 ## 整行内容 $0
 
 ```
@@ -4610,13 +4673,227 @@ String to number:101
 
 ```
 ## ARGV、ARGC
-简单使用，复杂的还没研究
+* ARGC 保存着传递给 awk 脚本的所有参数的个数
+* ARGV 是一个数组，保存着传递给 awk 脚本的所有参数，其索引范围从 0 到 ARGC
+* 当传递 5 个参数是，ARGC 的值为 6
+* ARGV[0]的值永远是 awk
+
 ```
+[huawei@n148 awk]$ cat arguments.awk
+BEGIN {
+ print "ARGC=",ARGC
+ for(i=0;i<ARGC;i++)
+ print ARGV[i]
+}
+[huawei@n148 awk]$ awk -f arguments.awk arg1 arg2 arg3 arg4 arg5
+ARGC= 6
+awk
+arg1
+arg2
+arg3
+arg4
+arg5
+
+
 [huawei@n148 awk]$ awk 'BEGIN{print "aaa", ARGV[0], ARGV[1], ARGV[2], ARGC}' p1 p2
 aaa awk p1 p2 3
 ```
 
+实现kv形式参数的高级案例
+* 以”参数名 参数值”的格式给 awk 脚本传递一些参数
+* awk 脚本获取传递元素的内容和数量作为参数
+* 如果把”—item 104 –qty 25”作为参数传递给 awk 脚本，awk 会把商品 104 的数量设置为 25
+* 如果把”—item 105 –qty 3”作为参数传递给 awk 脚本，awk 会把商品 105 的数量设置为 3
 
+
+```
+[huawei@n148 awk]$ cat argc-argv.awk
+BEGIN {
+ FS=",";
+ OFS=",";
+ for(i=0;i<ARGC;i++)
+ {
+   if(ARGV[i] == "--item")
+   {
+     itemnumber=ARGV[i+1];
+     delete ARGV[i]
+     i++;
+     delete ARGV[i]
+   }
+   else if (ARGV[i]=="--qty")
+   {
+     quantity=ARGV[i+1]
+     delete ARGV[i]
+     i++;
+     delete ARGV[i]
+   }
+ }
+}
+{
+ if ($1==itemnumber)
+   print $1,$2,$3,$4,quantity
+ else
+   print $0
+}
+[huawei@n148 awk]$ awk -f argc-argv.awk --item 104 --qty 25 items.txt
+101,HD Camcorder,Video,210,10
+102,Refrigerator,Appliance,850,2
+103,MP3 Player,Audio,270,15
+104,Tennis Racket,Sports,190,25
+105,Laser Printer,Office,475,5
+
+```
+## ARGIND
+* 当前处理的文件被存放在数组 ARGV 中，该数组在 body 区域被访问
+* ARGIND是 ARGV 的一个索引，其对应的值是当前正在处理的文件名
+* 当 awk 脚本仅处理一个文件时，ARGIND 的值是 1，ARGV[ARGIND]会返回当前正在处理的文件名。
+
+```
+[huawei@n148 awk]$ cat argind.awk
+{
+ print "ARGIND:",ARGIND
+ print "Current file:",ARGV[ARGIND]
+}
+[huawei@n148 awk]$ awk -f argind.awk items.txt items-sold.txt
+ARGIND: 1
+Current file: items.txt
+ARGIND: 1
+Current file: items.txt
+ARGIND: 1
+Current file: items.txt
+ARGIND: 1
+Current file: items.txt
+ARGIND: 1
+Current file: items.txt
+ARGIND: 2
+Current file: items-sold.txt
+ARGIND: 2
+Current file: items-sold.txt
+ARGIND: 2
+Current file: items-sold.txt
+ARGIND: 2
+Current file: items-sold.txt
+ARGIND: 2
+Current file: items-sold.txt
+
+```
+## 数字输出格式 OFMT
+初始是"%.6g"，表示一共只输出6位（不包括小数点）
+```
+[huawei@n148 awk]$ awk -f ofmt.awk
+--- using g ---
+Default OFMT: 143.123
+%.3g OFMT: 143
+%.4g OFMT: 143.1
+%.5g OFMT: 143.12
+%.6g OFMT: 143.123
+--- using f ---
+%.0f OFMT: 143
+%.1f OFMT: 143.1
+%.2f OFMT: 143.12
+%.3f OFMT: 143.123
+[huawei@n148 awk]$ cat ofmt.awk
+BEGIN {
+ total=143.123456789;
+ print "--- using g ---"
+ print "Default OFMT:",total;
+ OFMT="%.3g"
+ print "%.3g OFMT:",total;
+ OFMT="%.4g"
+ print "%.4g OFMT:",total;
+ OFMT="%.5g"
+ print "%.5g OFMT:",total;
+ OFMT="%.6g"
+ print "%.6g OFMT:",total;
+ print "--- using f ---"
+ OFMT="%.0f";
+ print "%.0f OFMT:",total;
+ OFMT="%.1f";
+ print "%.1f OFMT:",total;
+ OFMT="%.2f";
+ print "%.2f OFMT:",total;
+ OFMT="%.3f";
+ print "%.3f OFMT:",total;
+}
+
+```
+
+## shell环境变量数组 ENVIRON
+ENVIRON 是一个包含所有 shell 环境变量的数组，其索引就是环境变量的名称
+```
+
+[huawei@n148 awk]$ cat environ.awk
+BEGIN {
+OFS="="
+for(x in ENVIRON)
+print x,ENVIRON[x]
+}
+
+[huawei@n148 awk]$ awk -f environ.awk
+XDG_DATA_DIRS=/home/huawei/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+AWKPATH=.:/usr/share/awk
+OLDPWD=/home/huawei
+LANG=en_US.UTF-8
+HISTSIZE=1000
+XDG_RUNTIME_DIR=/run/user/1004
+...
+```
+## 不区分大小写 IGNORECASE
+默认情况下，IGNORECASE 的值是 0，所有 awk 区分大小写。当把 IGNORECASE 的值设置为 1 时，awk 则不区分大小写，这在使用正则表达式和比较字符串时很有效率。
+```
+items.txt 中包含的是大写的”Video”,所以找不到
+[huawei@n148 awk]$ awk '/video/ {print}' items.txt
+
+当把 IGNORECASE 设置为 1 时，就能匹配并打印包含”Video”的行，因为现在 awk 不区分大小写。
+[huawei@n148 awk]$ awk 'BEGIN{IGNORECASE=1} /video/{print}' items.txt
+101,HD Camcorder,Video,210,10
+
+
+---------------------------------------------------------------
+同时支持字符串比较和正则表达式。
+
+[huawei@n148 awk]$ awk -f ignorecase.awk items.txt
+101,HD Camcorder,Video,210,10
+104,Tennis Racket,Sports,190,20
+[huawei@n148 awk]$ cat ignorecase.awk
+BEGIN {
+FS=",";
+IGNORECASE=1;
+}
+{
+if ($3 == "video") print $0;
+if ($2 ~ "TENNIS") print $0;
+}
+
+```
+## 错误信息 ERRNO
+当执行 I/O 操作(比如 getline)出错时，变量 ERRNO 会保存错误信息。
+```
+试图用 getline 读取一个不存在的文件，此时 ERRNO 的内容将会是”No such file or directory”
+
+[huawei@n148 awk]$ awk -f errno.awk items.txt
+101,HD Camcorder,Video,210,10
+No such file or directory
+102,Refrigerator,Appliance,850,2
+No such file or directory
+103,MP3 Player,Audio,270,15
+No such file or directory
+104,Tennis Racket,Sports,190,20
+No such file or directory
+105,Laser Printer,Office,475,5
+No such file or directory
+
+[huawei@n148 awk]$ cat errno.awk
+{
+ print $0;
+ x = getline < "dummy-file.txt"
+ if ( x == -1 )
+   print ERRNO
+ else
+   print $0
+}
+
+```
 ## 模式Pattern
 分类：
 * 空模式
@@ -4920,6 +5197,8 @@ a 4 0
 a
 b 5 10
 ```
+awk 'BEGIN{printf "What is your name?"; getline name < "/dev/tty" }  print name  END{print "See you," name "."}
+
 
 ## 将awk程序放入文件 -f
 放在脚本里的演示
@@ -4936,46 +5215,6 @@ END {
 
 [huawei@n148 playground]$ awk -f t.sh emp.data
 3 emps, total: 297.5 ave:99.1667
-```
-## 输出到文件
-* 把print语句打印的内容重定向到指定的文件中
-```
-[huawei@n148 awk]$ cat printf-width4.awk
-BEGIN {
- FS=","
- printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty" > "report.txt"
- printf "---------------------------------------------------------------------\n" >> "report.txt"
-}
-{
-  if($5 > 10)
-   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5 >> "report.txt"
-}
-[huawei@n148 awk]$ awk -f printf-width4.awk items.txt
-[huawei@n148 awk]$ cat report.txt
-Num     Description     Type            Price   Qty
----------------------------------------------------------------------
-103     MP3 Player      Audio           $270.00 015
-104     Tennis Racket   Sports          $190.00 020
-```
-* 执行 awk 脚本时使用重定向
-```
-[huawei@n148 awk]$ cat printf-width4.awk
-BEGIN {
- FS=","
- printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty"
- printf "---------------------------------------------------------------------\n"
-}
-{
-  if($5 > 10)
-   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5
-}
-[huawei@n148 awk]$ awk -f printf-width4.awk items.txt >report.txt
-[huawei@n148 awk]$ cat report.txt
-Num     Description     Type            Price   Qty
----------------------------------------------------------------------
-103     MP3 Player      Audio           $270.00 015
-104     Tennis Racket   Sports          $190.00 020
-
 ```
 ## 简单判断、if else
 简单判断属于“关系运算模式”（详见关系运算模式），语法类似下面这样即可，只可用于模式中
@@ -5412,7 +5651,324 @@ for (x in array)
 30 3
 
 ```
+## 自定义函数 function
+```
+function fn-name(parameters)
+{
+	function-body
+}
+```
+* fn-name: 函数名，和 awk 变量名一样，用户定义的函数名应该以字母开头，后续字符可以数字、字母或下划线，关键字不能用做函数名
+* parameters:多个参数要使用逗号分开，也可以定义一个没有参数的函数
+* function-body:一条或多条 awk 语句
+```
+[huawei@n148 awk]$ awk -f function.awk items.txt
+101,HD Camcorder,Video,189,10
+102,Refrigerator,Appliance,765,2
+103,MP3 Player,Audio,135,15
+104,Tennis Racket,Sports,95,20
+105,Laser Printer,Office,427.5,5
+
+[huawei@n148 awk]$ cat function.awk
+BEGIN {
+ FS=","
+ OFS=","
+}
+{
+ if ($5 <= 10)
+   print $1,$2,$3,discount(10),$5
+ else
+   print $1,$2,$3,discount(50),$5
+}
+function discount(percentage)
+{
+ return $4 - ($4*percentage/100);
+}
+
+```
+## 国际化
+使用po文件，详见sed_and_awk_101_hacks的97
+
+## 获取时间 systime、strftime
+```
+systime()函数返回系统的 POSIX 时间，即自 1970 年 1 月 1 日起至今经过的秒数。
+[huawei@n148 awk]$ awk 'BEGIN { print systime() }'
+1637505079
+
+使用 systime 和 strftime 以可读的格式打印当前时间
+[huawei@n148 awk]$ awk 'BEGIN { print strftime("%c",systime()) }'
+Sun 21 Nov 2021 10:31:34 PM CST
+
+展示多种可用的时间格式
+[huawei@n148 awk]$ awk -f strftime.awk
+--- basic formats ---
+Format 1: 11/21/2021 22:32:37
+Format 2: 11/21/21 10:32:37 PM
+Format 3: 11-Nov-2021 22:32:37
+Format 4: 11-Nov-2021 22:32:37 CST
+Format 5: Sun Nov 21 22:32:37 CST 2021
+Format 6: Sunday November 21 22:32:37 CST 2021
+--- quick formats ---
+Format 7: Sun 21 Nov 2021 10:32:37 PM CST
+Foramt 8: 11/21/21
+Format 9: 2021-11-21
+Format 10: 11/21/2021
+Format 11: 10:32:37 PM
+--- single line format with %t ---
+2021    November        21
+--- multi line format with %n ---
+2021
+November
+21
+[huawei@n148 awk]$ cat strftime.awk
+BEGIN {
+ print "--- basic formats ---"
+ print strftime("Format 1: %m/%d/%Y %H:%M:%S",systime())
+ print strftime("Format 2: %m/%d/%y %I:%M:%S %p",systime())
+ print strftime("Format 3: %m-%b-%Y %H:%M:%S",systime())
+ print strftime("Format 4: %m-%b-%Y %H:%M:%S %Z",systime())
+ print strftime("Format 5: %a %b %d %H:%M:%S %Z %Y",systime())
+ print strftime("Format 6: %A %B %d %H:%M:%S %Z %Y",systime())
+ print "--- quick formats ---"
+ print strftime("Format 7: %c",systime())
+ print strftime("Foramt 8: %D",systime())
+ print strftime("Format 9: %F",systime())
+ print strftime("Format 10: %x",systime())
+ print strftime("Format 11: %X",systime())
+ print "--- single line format with %t ---"
+ print strftime("%Y %t%B %t%d",systime())
+ print "--- multi line format with %n ---"
+ print strftime("%Y%n%B%n%d",systime())
+}
+
+```
+## 调用系统函数 system
+执行系统命令时，可以传递任意的字符串作为命令的参数，它会被当做操作系统命令准确执行，并返回结果
+```
+[huawei@n148 awk]$ awk 'BEGIN { system("pwd") }'
+/home/huawei/playground/awk
+[huawei@n148 awk]$ awk 'BEGIN { system("date") }'
+Sun Nov 21 22:40:16 CST 2021
+
+```
+## 输出重定向 > 、>>
+* 把print语句打印的内容重定向到指定的文件中
+```
+[huawei@n148 awk]$ cat printf-width4.awk
+BEGIN {
+ FS=","
+ printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty" > "report.txt"
+ printf "---------------------------------------------------------------------\n" >> "report.txt"
+}
+{
+  if($5 > 10)
+   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5 >> "report.txt"
+}
+[huawei@n148 awk]$ awk -f printf-width4.awk items.txt
+[huawei@n148 awk]$ cat report.txt
+Num     Description     Type            Price   Qty
+---------------------------------------------------------------------
+103     MP3 Player      Audio           $270.00 015
+104     Tennis Racket   Sports          $190.00 020
+```
+* 执行 awk 脚本时使用重定向
+```
+[huawei@n148 awk]$ cat printf-width4.awk
+BEGIN {
+ FS=","
+ printf "%-3s\t%-10s\t%-10s\t%-5s\t%-3s\n", "Num","Description","Type","Price","Qty"
+ printf "---------------------------------------------------------------------\n"
+}
+{
+  if($5 > 10)
+   printf "%-3d\t%-10s\t%-10s\t$%-.2f\t%03d\n", $1,$2,$3,$4,$5
+}
+[huawei@n148 awk]$ awk -f printf-width4.awk items.txt >report.txt
+[huawei@n148 awk]$ cat report.txt
+Num     Description     Type            Price   Qty
+---------------------------------------------------------------------
+103     MP3 Player      Audio           $270.00 015
+104     Tennis Racket   Sports          $190.00 020
+
+```
+
+## 输入重定向 getline
+正常情况下每从输入文件读取一行，body 区域的代码就会执行一次。用户无法干预，awk 自动执行这个过程。然而使用 geline 命令可以控制 awk 从标准输入、管道或者当前正在处理的文件之外的其他输入文件获得输入。它负责从输入获得下一行的内容，并给NF,NR和FNR等内建变量赋值。如果得到一条记录，getline函数返回1，如果到达文件的末尾就返回0，如果出现错误，例如打开文件失败，就返回-1，可以结合到while等流控制语句使用。
+
+* getline无参数，读入的内容放到$0
+```
+[huawei@n148 awk]$ awk -F"," '{getline;print $0;}' items.txt
+102,Refrigerator,Appliance,850,2
+104,Tennis Racket,Sports,190,20
+105,Laser Printer,Office,475,5
+
+1 首先awk自动读入101，然后执行{}
+2 遇到getline，读入102覆盖原有的101，打印
+3 自动读入103，然后getline读入104，覆盖103，打印
+4 自动读入105，getline失败，打印105
+```
+* getline有参数，读入的内容放到参数中
+```
+相当于打印奇数行了
+[huawei@n148 awk]$ awk -F"," '{getline tmp;print $0;}' items.txt
+101,HD Camcorder,Video,210,10
+103,MP3 Player,Audio,270,15
+105,Laser Printer,Office,475,5
+
+奇偶分离
+[huawei@n148 awk]$ awk -F"," '{getline tmp; print "$0->",$0;print "tmp->",tmp;}' items.txt
+$0-> 101,HD Camcorder,Video,210,10
+tmp-> 102,Refrigerator,Appliance,850,2
+$0-> 103,MP3 Player,Audio,270,15
+tmp-> 104,Tennis Racket,Sports,190,20
+$0-> 105,Laser Printer,Office,475,5
+tmp-> 104,Tennis Racket,Sports,190,20
+```
+* 从其他的文件 getline 内容
+```
+在两个文件中循环切换，打印所有内容。
+[huawei@n148 awk]$ awk -F"," '{print $0;getline <"items-sold.txt"; print $0;}' items.txt
+101,HD Camcorder,Video,210,10
+101 2 10 5 8 10 12
+102,Refrigerator,Appliance,850,2
+102 0 1 4 3 0 2
+103,MP3 Player,Audio,270,15
+103 10 6 11 20 5 13
+104,Tennis Racket,Sports,190,20
+104 2 3 4 0 6 5
+105,Laser Printer,Office,475,5
+105 10 2 5 7 12 6
+```
+* 从其他的文件 getline 内容到变量中
+```
+[huawei@n148 awk]$ awk -F"," '{print $0; getline tmp < "items-sold.txt";print tmp;}' items.txt
+101,HD Camcorder,Video,210,10
+101 2 10 5 8 10 12
+102,Refrigerator,Appliance,850,2
+102 0 1 4 3 0 2
+103,MP3 Player,Audio,270,15
+103 10 6 11 20 5 13
+104,Tennis Racket,Sports,190,20
+104 2 3 4 0 6 5
+105,Laser Printer,Office,475,5
+105 10 2 5 7 12 6
+```
+* getline 执行外部命令并获取其输出
+
+```
+执行linux的date命令，并通过管道输出给getline，然后再把输出赋值给自定义变量d，并打印它。
+
+[huawei@n148 awk]$ awk 'BEGIN{ "date" | getline d; print d}' test
+Mon Nov 22 02:24:41 CST 2021
+
+---------------------------------------
+
+执行shell的date命令，并通过管道输出给getline，然后getline从管道中读取并将输入赋值给d，split函数把变量d转化成数组mon，然后打印数组mon的第二个元素
+
+[huawei@n148 awk]$  awk 'BEGIN{"date" | getline d; split(d,mon); print mon[2]}'
+Nov
+
+---------------------------------------
+
+命令ls的输出传递给geline作为输入，循环使getline从ls的输出中读取一行，并把它打印到屏幕。这里没有输入文件，因为BEGIN块在打开输入文件前执行，所以可以忽略输入文件。
+
+[huawei@n148 awk]$ awk 'BEGIN{while( "ls" | getline) print}'
+data2.txt
+data.txt
+employee-multiple-fs.txt
+employee.txt
+environ.awk
+errno.awk
+function.awk
+...
+
+---------------------------------------
+
+awk将逐行读取文件/etc/passwd的内容，在到达文件末尾前，计数器lc一直增加，当到末尾时，打印lc的值。注意，如果文件不存在，getline返回-1，如果到达文件的末尾就返回0，如果读到一行，就返回1，所以命令 while (getline < "/etc/passwd")在文件不存在的情况下将陷入无限循环，因为返回-1表示逻辑真，注意关闭文件。
+
+[huawei@n148 awk]$ awk 'BEGIN{while (getline < "/etc/passwd" > 0) lc++; print lc}'
+52
+
+
+---------------------------------------
+这个案例比较一般
+
+使用 getline 获取 date 命令的输出并打印出来。请注意这里也要使用 close 刚执行的命令，date 命令的输出保存在变量$0 中（此处getline后面省略则默认到$0里，换个别的变量即可）
+
+[huawei@n148 awk]$ awk -f getline1.awk items.txt
+Timestamp:Mon Nov 22 01:45:41 CST 2021
+Sell More:Give discount on HD Camcorder immediatelty!
+Buy More:Order Refrigerator immediately!
+Sell More:Give discount on MP3 Player immediatelty!
+Sell More:Give discount on Tennis Racket immediatelty!
+Buy More:Order Laser Printer immediately!
+
+
+其实这个例子并未体现出作用，完全可以在begin里直接system("date")打印出来即可
+[huawei@n148 awk]$ cat getline1.awk
+BEGIN {
+ FS=",";
+ "date" | getline			可以换成 "date" | getline timestamp
+ close("date")
+ print "Timestamp:" $0		可以换成 print "Timestamp:" timestamp
+}
+{
+ if ( $5 <= 5)
+   print "Buy More:Order",$2,"immediately!"
+ else
+   print "Sell More:Give discount on",$2,"immediatelty!"
+}
+
+```
+## 双向管道 |&
+awk 可以使用”|&”和外部进程通信，这个过程是双向的。
+```
+[huawei@n148 awk]$ awk -f two-way.awk
+Sed and Awk is Great!
+[huawei@n148 awk]$ cat two-way.awk
+BEGIN {
+ command = "sed 's/Awk/Sed and Awk/'"
+ print "Awk is Great!" |& command
+ close(command,"to");
+ command |& getline tmp
+ print tmp;
+ close(command);
+}
+
+这个例子中：
+1 command = “sed ‘s/Awk/Sed and Awk/’” 这是要和 awk 双向管道对接的命令。它是一个简单的 sed 替换命令，把”Awk”替换为”Sed and Awk”。
+2 print “Awk is Great!” |& command 。 command的输入（即sed 替换命令的输入）是”Awk is Great!”。”|&”表示这里是双向管道。”|&”右边命令的输入来自左边命令的输出。
+3 close(command,”to”) 命令执行完成，应该关闭”to”进程。
+4 command |& getline tmp  。 command执行完成，就要用 getline 获取其输出。前面命令的输出会被存在变量”tmp”中。
+5 print tmp  打印输出
+6 close(command) 最后关闭命令。
+
+```
+## 关闭管道 close
+可以在awk中打开一个管道，且同一时刻只能有一个管道存在。通过close()可关闭管道
+```
+awk把print语句的输出通过管道作为linux命令sort的输入,END块执行关闭管道操作。
+
+[huawei@n148 awk]$ df|awk '{print $5,$1 | "sort" } END {close("sort")}'
+0% devtmpfs
+0% tmpfs
+0% tmpfs
+0% tmpfs
+100% /dev/sr0
+11% tmpfs
+1% tmpfs
+1% tmpfs
+1% tmpfs
+24% /dev/sda1
+64% /dev/mapper/centos-root
+76% /dev/mapper/centos-home
+Use% Filesystem
+
+```
 ## 随机数与取整 sand、rand、int
+* rand()函数用于产生 0~1 之间的随机数，它只返回 0~1 之间的数，绝不会返回 0 或 1。
+* srand(n)函数使用给定的参数 n 作为种子来初始化随机数的产生过程。不论何时启动，awk只会从 n 开始产生随机数，如果不指定参数 n，awk 默认使用当天的时间作为产生随机数的种子。
+* int()函数返回给定参数的整数部分值。n 可以是整数或浮点数，如果使用整数做参数，返回值即是它本身，如果指定浮点数，小数部分会被截断。
 ```
 [huawei@n148 ~]$ awk 'BEGIN{srand(); for (a=0;a<3;a++){print rand()}}'
 0.0483539
@@ -5428,8 +5984,23 @@ for (x in array)
 14
 ```
 ## 字符串替换 sub、gsub
-sub仅可替换1次，gsub全部替换。sub和gsub的第三个参数用于指定替换哪些列。貌似返回值是替换次数（未测试。。。）
+* 仅GAWK/NAWK支持的字符串函数。  
+* sub仅可替换1次，如果替换操作执行成功，sub 函数返回 1，否则返回 0.
+* gsub全部替换。
+* 两个函数的第3个参数都是可选的，如果没有指定，则使用$0作为第3个参数。
+
 ```
+演示sub第3个参数的作用，注意state的值已经被改变了。
+[huawei@n148 awk]$ cat sub.awk
+BEGIN {
+ state="CA is California"
+ sub("C[Aa]","KA",state);
+ print state;
+}
+[huawei@n148 awk]$ awk -f sub.awk
+KA is California
+
+第 3 个参数是可选的，如果没有指定，awk 会使用$0(当前记录)做为第 3 个参数，如下案例
 [huawei@n148 awk]$ cat test11.txt
 Allen Phillips
 Green Lee
@@ -5440,6 +6011,10 @@ sub仅可替换1次
 ALlen Phillips
 Green Lee
 WiLliam Ken Allen
+
+判断sub的返回值案例
+[huawei@n148 awk]$ awk '{ if(sub("HD","High-Def")) print $0; }' items.txt
+101,High-Def Camcorder,Video,210,10
 
 
 仅替换$1，即第一列
@@ -5506,7 +6081,8 @@ William Ken Allen 17
 
 ```
 ## 查找位置 index
-查找指定字符串在指定列或整行中的起始位置
+* 查找指定字符串在指定列或整行中的起始位置。
+* 也可以用 index 来检测指定的字符串(或者字符)是否存在于输入字符串中。如果指定的字符串没有出现，返回 0，就说明指定的字符串不存在
 ```
 [huawei@n148 awk]$ cat test11.txt
 Allen Phillips
@@ -5524,6 +6100,20 @@ William Ken Allen
 0
 0
 2
+
+演示查找到与未找到的案例
+[huawei@n148 awk]$ cat index.awk
+BEGIN {
+ state="CA is California"
+ print "String CA starts at location",index(state,"CA");
+ print "String Cali starts at location",index(state,"Cali");
+ if(index(state,"NY")==0)
+ print "String NY is not found in:",state
+}
+[huawei@n148 awk]$ awk -f index.awk
+String CA starts at location 1
+String Cali starts at location 7
+String NY is not found in: CA is California
 ```
 ## 字符串分割 split
 返回分割后的数组长度，注意数组的元素下标从1开始
@@ -5540,6 +6130,63 @@ qq
 te
 ab
 
+```
+## 取子串 substr
+```
+[huawei@n148 awk]$ cat items.txt
+101,HD Camcorder,Video,210,10
+102,Refrigerator,Appliance,850,2
+103,MP3 Player,Audio,270,15
+104,Tennis Racket,Sports,190,20
+105,Laser Printer,Office,475,5
+
+指定start与length
+[huawei@n148 awk]$ awk '{ print substr($0,1,3) }' items.txt
+101
+102
+103
+104
+105
+
+仅指定start，默认到结尾
+[huawei@n148 awk]$ awk '{ print substr($0,5) }' items.txt
+HD Camcorder,Video,210,10
+Refrigerator,Appliance,850,2
+MP3 Player,Audio,270,15
+Tennis Racket,Sports,190,20
+Laser Printer,Office,475,5
+```
+
+## 检测包含 match、RSTART、RLENGTH
+* match 函数从输入字符串中检索给定的字符串(或正则表达式)，当检索到字符串时，返回一个正数值。
+* match成功则会设置RSTART（在源中的start）、RLENGTH（在源中的length）
+```
+[huawei@n148 awk]$ cat match.awk
+BEGIN {
+ state="CA is California"
+ if(match(state,"Cali"))
+ {
+   print substr(state,RSTART,RLENGTH),"is present in:",state;
+ }
+}
+[huawei@n148 awk]$ awk -f match.awk
+Cali is present in: CA is California
+```
+## 大小写转换 tolower、toupper
+```
+[huawei@n148 awk]$ awk '{ print tolower($0) }' items.txt
+101,hd camcorder,video,210,10
+102,refrigerator,appliance,850,2
+103,mp3 player,audio,270,15
+104,tennis racket,sports,190,20
+105,laser printer,office,475,5
+
+[huawei@n148 awk]$ awk '{ print toupper($0) }' items.txt
+101,HD CAMCORDER,VIDEO,210,10
+102,REFRIGERATOR,APPLIANCE,850,2
+103,MP3 PLAYER,AUDIO,270,15
+104,TENNIS RACKET,SPORTS,190,20
+105,LASER PRINTER,OFFICE,475,5
 ```
 ## 排序 asort、asorti
 * 都是升序
