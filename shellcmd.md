@@ -3,6 +3,7 @@
 ## yum基本操作
 
 http://blog.chinaunix.net/uid-346158-id-2131252.html
+https://blog.csdn.net/zhaoyanjun6/article/details/78894974
 
 ## 查看是否安装了某个库
 
@@ -162,21 +163,110 @@ $HOME/.bashrc该文件通常通过其他文件运行
 命令env、printenv和set之间的差异很细微。set命令会显示出全局变量、局部变量以及用户定义变量。它还会按照字母顺序对结果进行排序。env和printenv命令同set命令的区别在于前两个命令不会对变量排序，也不会输出局部变量和用户定义变量。在这种情况下，env和printenv的输出是重复的。不过env命令有一个printenv没有的功能，这使得它要更有用一些。
 ## 所有环境变量
 Linux命令行与shell脚本编程大全.第3版 第111页
-## unset 定义与取消用户变量
 
+## 导出为环境变量 export 
+导出变量到父shell
+```
+$ my_variable="I am Global now"
+$ export my_variable
+```
+## 取消变量 unset
+是让变量不存在了，而不是让其值为空
 ```
 [huawei@10 postdb]$ my_variable="I am Global now"
 [huawei@10 postdb]$ echo $my_variable
 I am Global now
 [huawei@10 postdb]$ unset my_variable
 [huawei@10 postdb]$ echo $my_variable
+[huawei@10 postdb]$
+
+注意下面的区别。第2个是將變量 A 設定為"空值"(null  value)
+[huawei@n148 ~]$ unset A
+[huawei@n148 ~]$ echo $A
+
+[huawei@n148 ~]$ A=
+[huawei@n148 ~]$ echo $A
+
+[huawei@n148 ~]$
 ```
-## export 导出变量到父shell
+# shell与sh文件
+## 何为shell？
+http://bbs.chinaunix.net/thread-218853-2-1.html
+
+在Linux的预设系统中，通常可以找到好几种不同的shell。大部分的Linux操作系统的预设shell都是bash，其原因大致如下两种：
+* 自由软件
+* 功能强大 bash是gnu project最成功的产品之一，自推出以来深受广大Unix用户的喜爱， 且也逐渐成为不少组织的系统标准。
+## 查看本机的shell种类
+
+
 ```
-$ my_variable="I am Global now"
-$ export my_variable
+[huawei@n148 ~]$ cat /etc/shells
+/bin/sh
+/bin/bash
+/usr/bin/sh
+/usr/bin/bash
+/bin/tcsh
+/bin/csh
+/usr/bin/tmux
 ```
-# Shell文件
+
+## shell prompt(PS1) 与 Carriage Return(CR) 的关系
+http://bbs.chinaunix.net/forum.php?mod=viewthread&tid=218853&page=2#pid1467910
+
+提示符(prompt)的格式或因不同的版本而各有不同， 在Linux上，只需留意最接近游标的一个提示符号，通常是如下两者之一：
+* $: 给一般用户账号使用
+* #: 给root(管理员)账号使用
+
+shell prompt的意思很简单： 告诉shell使用者，您现在可以输入命令行了。CR（Carriage Return, 由Enter键产生）的意思是使用者告诉shell：老兄，你可以执行的我命令行了。严格来说： 所谓的命令行， 就是在shell prompt与CR之间所输入的文字。而 cursor 是指示鍵盤在命令行所輸入的位置，使用者每輸入一個鍵，cursor 就往後移動一格，直到碰到命令行讀進 CR(Carriage Return，由 Enter 鍵產生)字符為止。
+
+## 命令行的标准格式
+分为下面3部分
+```
+command-name options argument  
+```
+<font color=#FF000 size=5>**shell会依据IFS(Internal Field Seperator) 将 command line 所输入的文字先拆解为字段(word). 然后再针对特殊的字符(meta)做处理，最后再重组整行command line。**  </font>
+
+IFS是shell预设使用的字段位分隔符号，可以由一个及多个如下按键组成：
+* 空白键(White Space)
+* 表格键(Tab)
+* 回车键(Enter)
+
+命令的名称(command-name)可以从如下途径获得：
+* 明確路逕所指定的外部命令
+* 命令別名(alias)
+* 自定功能(function)
+* shell 內建命令(built-in)
+* $PATH 之下的外部命令
+
+每一個命令行均必需含用命令名稱，這是不能缺少的
+## 命令行中meta字符
+command line的每一个charactor, 分为如下两种：
+* literal：也就是普通的纯文字，对shell来说没特殊功能；
+* meta: 对shell来说，具有特定功能的特殊保留元字符。
+
+除了常用的IFS与CR, 常用的meta还有：
+```
+meta   作用
+=      设定变量
+$      作变量或运算替换(请不要与shell prompt混淆)
+>      输出重定向(重定向stdout)
+<      输入重定向(重定向stdin)
+|      命令管道
+&      重定向file descriptor或将命令至于后台(bg)运行
+()     将其内部的命令置于nested subshell执行，或用于运算或变量替换
+{}     将期内的命令置于non-named function中执行，或用在变量替换的界定范围
+;      在前一个命令执行结束时，而忽略其返回值，继续执行下一个命令
+&&     在前一个命令执行结束时，若返回值为true，继续执行下一个命令
+||     在前一个命令执行结束时，若返回值为false，继续执行下一个命令
+!      执行histroy列表中的命令
+...
+```
+假如我们需要在command line中将这些保留元字符的功能关闭的话， 就需要quoting处理了。常用的quoting有以下三种方法：
+* hard quote：''(单引号)，凡在hard quote中的所有meta均被关闭；
+* soft quote：""(双引号)，凡在soft quote中大部分meta都会被关闭，但某些会保留(如$);
+* escape: \ (反斜杠)，只有在紧接在escape(跳脱字符)之后的单一meta才被关闭；
+
+## “ ” 与 ‘ ’ 和 \ 的差异
 ## Sha-Bang(#!)
 要在脚本文件第一行，用于指定用哪个shell执行此脚本
 ```
@@ -192,6 +282,7 @@ who|wc -l
 [huawei@10 bin]$ sh -x nusers
 ```
 * 可以在脚本文件中加入set -x即开启，set +x即关闭
+## 
 # 外部命令与内建命令
 
 ## 外部命令
@@ -234,6 +325,43 @@ pwd is /usr/bin/pwd
 [huawei@n148 playground]$ which pwd
 /usr/bin/pwd
 ```
+# 打印
+
+## echo
+echo将argument送出到标准输出(stdout),通常是在监视器(monitor)上输出。
+```
+“[huawei@n148 ~]$ echo”输出只有一个空白行，然后又回到了shell prompt上了。 这是因为echo在预设上，在显示完argument之后，还会送出以一个换行符号 (new-line charactor). 但是上面的command echo并没有任何argument，那结果就只剩一个换行符号。 若你要取消这个换行符号， 可以利用echo的-n 选项
+
+[huawei@n148 ~]$ echo
+
+[huawei@n148 ~]$ echo -n
+[huawei@n148 ~]$
+
+[huawei@n148 ~]$ echo -e "a\tb\tc\nd\te\tf"
+a       b       c
+d       e       f
+
+[huawei@n148 ~]$ echo -e "\x61\x09\x62\x09\x63\x0a\x64\x09\x65\x09\x66"
+a       b       c
+d       e       f
+
+[huawei@n148 ~]$ echo -ne "a\tb\tc\nd\te\bf\a"
+a       b       c
+d       f[huawei@n148 ~]$
+
+```
+
+## printf
+## od 八进制打印每个字符
+```
+[huawei@10 bin]$ od -a -b nusers
+0000000   #   !  sp   /   b   i   n   /   s   h  sp   -  nl   w   h   o
+        043 041 040 057 142 151 156 057 163 150 040 055 012 167 150 157
+0000020   |   w   c  sp   -   l  nl
+        174 167 143 040 055 154 012
+0000027
+
+```
 # history 历史记录
 # 日期时间 date
 ```
@@ -266,15 +394,31 @@ sh
 /home/huawei/hwwork/postdb/src/test/ATL3
 
 ```
-# 文件处理
-
-## 权限
+# 权限
 
 umask、chmod、chown、chgrp
 
-Linux命令行与shell脚本编程大全.第3版 7.2
+Linux命令行与shell脚本编程大全.第3版 7.2  
 
-## 复制
+改变文件夹的所有者
+```
+[huawei@10 postdb]$ sudo chown -R huawei:huawei /home/huawei/work/postdb/
+```
+# 文件操作 
+
+## 文件查找 find、locate
+https://www.cnblogs.com/derek1184405959/p/11100469.html
+```
+[huawei@10 postdb]$ locate pg_config_ext.h
+/home/huawei/work/postdb/dest/include/pg_config_ext.h
+/home/huawei/work/postdb/dest/include/postgresql/server/pg_config_ext.h
+
+[huawei@10 postdb]$ find -name  pg_config_ext.h
+./dest/include/postgresql/server/pg_config_ext.h
+./dest/include/pg_config_ext.h
+
+```
+## 复制 cp
 ```
 $ cp -R Scripts/ Mod_Scripts
 ```
@@ -6621,8 +6765,7 @@ total 12
 ---00000017---
 ---00000018---
 ```
-# find 文件查找
-https://www.cnblogs.com/derek1184405959/p/11100469.html
+
 # tar 压缩与归档
 下面案例演示按日期创建子目录，然后读取配置并将其内所有文件归档
 ```
@@ -6679,21 +6822,7 @@ exit
 ```
 # 数组变量
 
-# 打印
 
-## echo
-
-## printf
-## od 八进制打印每个字符
-```
-[huawei@10 bin]$ od -a -b nusers
-0000000   #   !  sp   /   b   i   n   /   s   h  sp   -  nl   w   h   o
-        043 041 040 057 142 151 156 057 163 150 040 055 012 167 150 157
-0000020   |   w   c  sp   -   l  nl
-        174 167 143 040 055 154 012
-0000027
-
-```
 # 命令替换
 
 shell脚本中最有用的特性之一就是可以从命令输出中提取信息，并将其赋给变量，两种方式如下
@@ -7777,6 +7906,74 @@ huawei   pts/11       2021-09-26 13:16 (10.100.100.54)
 # 信号
 ## 捕获信号 trap
 # 后台运行
+我们经常会碰到这样的问题，用 telnet/ssh 登录了远程的 Linux 服务器，运行了一些耗时较长的任务， 结果却由于网络的不稳定导致任务中途失败。如何让命令提交后不受本地关闭终端窗口/网络断开连接的干扰呢？  
+当用户注销（logout）或者网络断开时，终端会收到 HUP（hangup）信号从而关闭其所有子进程。
+```
+hangup 名称的来由
+在 Unix 的早期版本中，每个终端都会通过 modem 和系统通讯。当用户 logout 时，modem 就会挂断（hang up）电话。 同理，当 modem 断开连接时，就会给终端发送 hangup 信号来通知其关闭所有子进程。 
+```
+解决方法：
+* 让进程忽略HUP(hangup)信号
+
+* 让进程运行在新的会话里,从而成为不属于此终端的子进程
+## nohup
+让提交的命令忽略hangup信号（即no-hangup）。只需在要处理的命令前加上 nohup 即可，标准输出和标准错误缺省会被重定向到nohup.out文件中
+* 一般在结尾加上"&"来将命令同时放入后台运行
+* ">xxx.log 2>&1 &" 类似这样来更改缺省的重定向文件名
+* ">/dev/null 2>&1 &" 重定向到/dev/null，不记录日志
+* 如果不将 nohup 命令的输出重定向，输出将附加到当前目录的 nohup.out 文件中。
+* 如果当前目录的 nohup.out 文件不可写，输出重定向到 $HOME/nohup.out 文件中。
+* 如果没有文件能创建或打开以用于追加，那么 COMMAND参数指定的命令不可调用。
+* 如果标准错误是一个终端，那么把指定的命令写给标准错误的所有输出作为标准输出重定向到相同的文件描述符。
+* 完整的使用语法类似这样“nohup aaa.sh > aaa.log 2>&1 &”
+```
+
+[huawei@n148 job]$ nohup ping www.163.com &
+[1] 101364
+[huawei@n148 job]$ nohup: ignoring input and appending output to ‘nohup.out’ 意思是忽略输入并把输出追加到"nohup.out"
+
+可以查看到ping一直在后台运行，自身pid是89170，父进程号是132752
+[huawei@n148 job]$ ps aux |grep ping
+huawei    12567  0.0  0.0 463340  3912 ?        Sl   Nov13   0:16 /usr/libexec/gsd-housekeeping
+huawei   101364  0.0  0.0 132756  1720 pts/2    S    21:22   0:00 ping www.163.com
+huawei   101487  0.0  0.0 112820   976 pts/2    S+   21:23   0:00 grep --color=auto ping
+
+[huawei@n148 job]$ jobs
+[1]+  Running                 nohup ping www.163.com &
+
+----------------------------------------------
+
+输出重定并且向后台运行sh脚本，可以查看到ping与sh各自的进程号
+[huawei@n148 job]$ nohup sh a.sh  >tmp.log 2>&1 &
+[1] 99011
+[huawei@n148 job]$ ps -ef | grep 99011
+huawei    99011  74028  0 21:17 pts/2    00:00:00 sh a.sh
+huawei    99012  99011  0 21:17 pts/2    00:00:00 ping www.163.com
+huawei    99089  74028  0 21:18 pts/2    00:00:00 grep --color=auto 99011
+[huawei@n148 job]$ jobs
+[1]+  Running                 nohup sh a.sh > tmp.log 2>&1 &
+
+```
+## setsid
+nohup能通过忽略 HUP 信号来使进程避免中途被中断，但如果进程不属于接受 HUP 信号的终端的子进程，那么自然也就不会受到 HUP 信号的影响了。setsid 就能做到这一点。setsid创建新的会话，并使得调用setsid函数的进程成为新会话的领头进程。调用setsid函数的进程是新创建会话中的惟一的进程组，进程组ID为调用进程的进程号。
+
+* 是新建一个session，父进程号是1（是init进程，相当于创建了init进程的一个子进程，与当前终端的session便不再关联，自然，关闭终端，也不会对其产生影响）。
+* 且使用jobs是无法查到相关的作业信息的。
+* 如果是setsid一个脚本文件，则父进程号不是1，是init的子进程创建出的子shell的进程号
+```
+[huawei@n148 job]$ setsid ping www.163.com  >tmp.log 2>&1 &
+[1] 116882
+[huawei@n148 job]$ jobs
+[huawei@n148 job]$ ps -ef |grep ping
+huawei    12567  12106  0 Nov13 ?        00:00:16 /usr/libexec/gsd-housekeeping
+huawei   116883      1  0 21:53 ?        00:00:00 ping www.163.com
+huawei   116918 116302  0 21:53 pts/4    00:00:00 grep --color=auto ping
+[1]+  Done                    setsid ping www.163.com > tmp.log 2>&1
+```
+
+## ( ) 与 &
+```
+```
 ## 终端断开就停止
 在末尾加上&即可，每次启动新作业时，Linux系统都会为其分配一个新的作业号和PID。通过ps命令，可以看到所有脚本处于运行状态。
 
@@ -7784,13 +7981,10 @@ huawei   pts/11       2021-09-26 13:16 (10.100.100.54)
 [huawei@n148 playground]$ sh t.sh &
 ```
 最好是将后台运行的脚本的STDOUT和STDERR进行重定向，避免与前台的输出混在一起，并且此种方式在终端断开后进程也就都退出了
-## 终端断开也运行 nohup
-```
-nohup sh shell.sh &
-查看日志：tail -f nohup.out
-```
+
 其实还可以tmux
 ## coproc 协程
+
 # 作业控制
 ## 查看作业 jobs
 ```
@@ -7818,6 +8012,11 @@ echo "End of script..."
 ## 重启作业到前台 fg
 
 ## at、atq、atrm
+# tmux
+https://www.cnblogs.com/weiok/p/4794881.html
+http://cn.voidcc.com/question/p-qiqcfgfg-ot.html
+```
+```
 # 函数
 ## 简单使用
 ```
