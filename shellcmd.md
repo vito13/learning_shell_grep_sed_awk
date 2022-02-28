@@ -1,10 +1,17 @@
 # 安装软件
 
 ## yum基本操作
+重新安装
+https://www.cnblogs.com/wushaoliang/p/14756374.html
 
-http://blog.chinaunix.net/uid-346158-id-2131252.html
-https://blog.csdn.net/zhaoyanjun6/article/details/78894974
+centos版本7则下载下载下面4个文件
+ http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-3.4.3-168.el7.centos.noarch.rpm 
+ http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-metadata-parser-1.1.4-10.el7.x86_64.rpm
+ http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-plugin-fastestmirror-1.1.31-54.el7_8.noarch.rpm
+ http://mirrors.163.com/centos/7/os/x86_64/Packages/python-iniparse-0.4-9.el7.noarch.rpm
 
+## 换源
+http://mirrors.163.com/.help/centos.html
 ## 查看是否安装了某个库
 
 [huawei@n148 tutorial]$ rpm -qa | grep boost
