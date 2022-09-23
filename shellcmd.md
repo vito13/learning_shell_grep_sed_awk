@@ -20,6 +20,175 @@ http://mirrors.163.com/.help/centos.html
 
 [root@linuxftp243 ~]# rpm -ql httpd-2.4.6-90.el7.centos.x86_64
 
+# 安装工作环境
+
+## 安装虚拟机
+```
+1 安装vbox，下载centos iso
+2 vbox新建虚拟机。先改设置，4g内存，磁盘容量200g，添加第二块网卡hostonly（第一块默认nat）
+3 安装centos系统，英文，别选最小，选开发，挑带有dev之类的checkbox，网络界面打开2个网卡的开关
+4 建立一个用户，尽量别只用root
+5 系统装完后常用的gcc之类都有，可以上网，
+6 ifconfig查看enp0s8有没有ip，如没有则sudo dhclient enp0s8，再次ifconfig就能有ip
+  在vbox主ui菜单“管理-》主机网络管理器“中会看到此ip在其对应范围内
+7 moba建立连接，用上面的ip端口，用户名和pw即可
+8 在虚拟机里使用git clone下载代码，可以使用http地址进行clone
+9 vscode添加ssh连接(ssh config文件里不要忘记写port),此刻可以看到远程代码了，不用着急编译因为缺东西
+10 下载cmake.sh并sh之进行解压
+11 安装perl的tap包用于pg代码的build，yum install perl-IPC-Run-0.92-2.el7.noarch
+12 编写env.sh如下：主要是为了加入cmake与pg的bin目录到path
+sudo dhclient enp0s8
+export PDPORT=65432
+export PDDATA=/home/huawei/pgdata/new 
+export PATH=/home/huawei/hwwork/postdb/dest/bin:/home/huawei/work/cmake-3.21.1-linux-x86_64/bin:$PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/huawei/hwwork/postdb/dest/lib 
+13 往.bashrc里添加一行：   . ~/.env.sh
+14 重连远程，使环境变量生效
+15 sh ./configure_debug.sh,   sh ./corebuild.sh,     make clean,  make -j8,   make install完毕
+
+```
+## 连接远程桌面
+```
+1 使用ssh链接上后
+2 [gordon@h12 ~]$ vncserver -list 可以查看当前
+3 [gordon@h12 ~]$ vncserver 可以启动一个vnc，下面的h12:9即为地址(vncserver -kill :4是关闭)
+New 'h12:9 (gordon)' desktop is h12:9
+Starting applications specified in /home/gordon/.vnc/xstartup
+Log file is /home/gordon/.vnc/h12:9.log
+4 建立vnc连接，使用上面生成的地址，172.16.122.12:9，端口5900连接即可开启远程物理机桌面
+5 在菜单的system tool里启动远程物理机的vm，启动liu_vm_n8启动虚拟机，如果启动不了就是盘还没有挂上，还需挂盘
+6 挂盘：sudo mount -t auto /dev/data/data1  /data    此句在cat /etc/fstab的最后一句
+7 挂盘后直接启动虚拟机，
+	进入/data/gordon/liu_vm_n8， 执行[gordon@h12 liu_vm_n8]$ vmrun  -T ws start liu_vm_n8.vmx nogui
+	下面的操作不用执行了，有个脚本可以代替vnc，
+	文件位置在/data/gordon/vm12.sh。
+	内容是vmrun -T ws $1 /data/gordon/liu_vm_n8/liu_vm_n8.vmx nogui
+	如果vnc里已经开启了vm的gui界面则上述的命令行会执行失败，那还是改用gui点启动才行
+```
+## pandoc、mdbook、latex
+```
+如果下面执行命令：yum install cargo.x86_64 如果提示No package cargo.x86_64 available.
+可以执行下面命令： curl https://sh.rustup.rs -sSf | sh
+
+安装步骤，建议以管理员登入进行操作
+$ yum install -y ca-certificates
+$ yum install cargo.x86_64
+$ cargo install mdbook
+
+如果mdbook由于rust版本过高而安装失败，需要重新安装rust
+$ yum remove rust
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+添加mdbook到PATH中
+$ vi ~/.bash_profile
+PATH=$PATH:$HOME/bin:$HOME/.cargo/bin
+$. ~/.bash_profile
+
+
+
+如果perl低于5.30需要更新，否则跳过此步
+$ yum remove perl
+$ wget https://www.cpan.org/src/5.0/perl-5.36.0.tar.gz
+$ tar zxvf perl-5.36.0.tar.gz
+$ cd perl-5.36.0
+$ ./Configure -des -Dprefix=/usr/local/perl -Dusethreads -Uversiononly
+$ make -j 3
+$ make -j 3 install
+设置环境参数
+$ vi ~/.bashrc
+加入如下内容
+LOCAL_APP=$HOME/perl5/
+# local perl edition
+LOCAL_PERL_EDITION=$LOCAL_APP/perl
+export PERL5LIB=$LOCAL_PERL_EDITION/lib
+export PATH=$LOCAL_PERL_EDITION/bin:$PATH
+# local perl lib
+LOCAL_PERL_LIB=$LOCAL_APP/perl5
+export PERL_LOCAL_LIB_ROOT="$PERL_LOCAL_LIB_ROOT:$LOCAL_PERL_LIB"
+export PERL_MB_OPT="--install_base $LOCAL_PERL_LIB"
+export PERL_MM_OPT="INSTALL_BASE=$LOCAL_PERL_LIB"
+export PERL5LIB=$LOCAL_PERL_LIB/lib/perl5:.:$PERL5LIB
+export PATH=$LOCAL_PERL_LIB/bin:$PATH
+保存并刷新
+$ . ~/.bashrc
+
+
+
+下面如果安装perl必备中执行yum install perl-App-cpanminus.noarch导致perl回到旧版本,
+请使用以下命令 sudo wget http://xrl.us/cpanm -O /usr/bin/cpanm; sudo chmod +x /usr/bin/cpanm代替上面的命令。
+
+
+安装perl必备
+$ wget https://cpan.metacpan.org/authors/id/A/AN/ANDK/CPAN-2.34.tar.gz
+$ tar zxvf CPAN-2.34.tar.gz
+$ cd CPAN-2.34
+$ perl Makefile.PL
+$ make && make test
+$ make install
+$ yum install perl-App-cpanminus.noarch
+换国内源
+$ perl -MCPAN -e shell
+cpan[1]> o conf urllist push http://mirror.lzu.edu.cn/CPAN/
+cpan[2]> o conf commit
+cpan[3]> q
+安装perl包
+$ cpanm Modern::Perl 
+$ cpanm File::Find::Rule
+$ cpanm Path::Class
+$ cpanm Mojo::File
+$ cpanm File::Remove
+$ cpanm Regexp::Common
+$ cpanm Regexp::Common::Markdown
+$ cpanm Lingua::Han::PinYin
+
+
+
+安装python3
+$ yum --exclude=kernel* update -y
+$ yum groupinstall -y 'Development Tools'
+$ yum install -y gcc openssl-devel bzip2-devel libffi-devel
+$ wget https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tgz
+$ tar zxvf Python-3.6.8.tgz
+$ cd Python-3.6.8
+$ ./configure prefix=/usr/local/python3 --enable-optimizations
+$ make -j 3
+$ make install
+添加到path中
+$ vi ~/.bash_profile
+PATH=$PATH:$HOME/bin:$HOME/.cargo/bin:/usr/local/python3/bin/
+$. ~/.bash_profile
+
+
+# 安装pandoc
+$ wget https://github.com/jgm/pandoc/releases/download/2.10/pandoc-2.10-linux-amd64.tar.gz
+$ tar zxvf pandoc-2.10-linux-amd64.tar.gz
+添加到path中
+$ vi ~/.bash_profile
+PATH=$PATH:$HOME/bin:$HOME/.cargo/bin:/usr/local/python3/bin:/root/Downloads/pandoc-2.10/bin
+$. ~/.bash_profile
+
+
+
+安装latex
+$ wget https://mirrors.tuna.tsinghua.edu.cn/CTAN/systems/texlive/Images/texlive2022.iso
+$ locate texlive | xargs rm -rf
+$ mount -o loop texlive2022.iso /mnt/
+$ cd /mnt 
+$ ./install-tl
+按“I”进行安装，完毕后，可检查版本号： 
+$ latex -version
+$ cd ~
+$ umount /mnt/
+添加到path中
+$ vi ~/.bashrc 
+PATH=/usr/local/texlive/2022/bin/x86_64-linux:$PATH; export PATH
+MANPATH=/usr/local/texlive/2022/texmf-dist/doc/man:$MANPATH; export MANPATH
+INFOPATH=/usr/local/texlive/2022/texmf-dist/doc/info:$INFOPATH; export INFOPATH
+$ . ~/.bashrc 
+换国内源进行更新
+$ tlmgr option repository https://mirrors.tuna.tsinghua.edu.cn/CTAN/systems/texlive/tlnet
+$ tlmgr update --self --all --reinstall-forcibly-removed
+```
 # 操作系统GUI
 
 ## centos图形界面的开启和关闭
@@ -8206,3 +8375,4 @@ The result of adding them is: 15
 The result of multiplying them is: 50
 The result of dividing them is: 2
 ```
+
