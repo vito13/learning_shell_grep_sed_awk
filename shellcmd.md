@@ -8376,3 +8376,26 @@ The result of multiplying them is: 50
 The result of dividing them is: 2
 ```
 
+# gdb
+- info thr：线程列表
+- bt：显示堆栈
+- f6：进入堆栈的第6层
+- up：向上一层
+- down：向下一层
+- 回车：再次执行上一个命令
+- p 变量名：打印变量值
+- thr 2：切换到线程2
+- gdb -p 进程号：attach到进程
+- gdb启动后 attach 进程号：同上
+- quit或q：退出gdb
+- ctrl+x，ctrl+a，向上箭头，向下箭头：展示，关闭代码，上下移动代码
+- gcore 文件名：手动导出core文件
+- info break：查看断点
+- break 函数名：在指定函数下断点
+- delete 断点序号：删除指定断点，无序号则删除所有断点
+- break 文件名:行号：指定行断点
+- r：运行
+- c：执行到下一个断点
+- n：单步执行
+- s：单步进入
+
