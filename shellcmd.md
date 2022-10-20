@@ -1,17 +1,81 @@
 # 安装软件
 
-## yum基本操作
-重新安装
-https://www.cnblogs.com/wushaoliang/p/14756374.html
+## 查看centos版本
 
-centos版本7则下载下载下面4个文件
- http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-3.4.3-168.el7.centos.noarch.rpm 
- http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-metadata-parser-1.1.4-10.el7.x86_64.rpm
- http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-plugin-fastestmirror-1.1.31-54.el7_8.noarch.rpm
- http://mirrors.163.com/centos/7/os/x86_64/Packages/python-iniparse-0.4-9.el7.noarch.rpm
+cat /etc/redhat-release
 
+## 重装yum
+
+https://www.joshua317.com/article/228
+
+重装yum也会伴随着重装python2。。。所以需要先删除python
+
+```
+#强制清除已安装的程序及其关联
+sudo rpm -qa|grep python|sudo xargs rpm -e --allmatches --nodeps
+
+#删除所有残余文,xargs，允许你对输出执行其他某些命令
+sudo whereis python |sudo xargs rm -frv
+
+
+#验证删除，返回无结果说明清除干净
+whereis python
+```
+
+删除现有的yum
+```
+#强制清除已安装的程序及其关联
+sudo rpm -qa|grep yum|sudo xargs rpm -e --allmatches --nodeps
+
+#删除所有残余文,xargs，允许你对输出执行其他某些命令
+sudo whereis yum |sudo xargs rm -frv
+
+#验证删除，返回无结果说明清除干净
+whereis yum
+```
+
+安装yum
+
+```
+rpm -Uvh --replacepkgs python*.rpm
+rpm -Uvh --replacepkgs rpm-python*.rpm yum*.rpm --nodeps --force
+```
+
+验证
+
+```
+# python
+Python 2.7.5 (default, Aug  4 2017, 00:39:18) 
+[GCC 4.8.5 20150623 (Red Hat 4.8.5-16)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+
+
+# yum --version
+3.4.3
+  Installed: rpm-4.11.3-48.el7_9.x86_64 at 2021-12-28 02:19
+  Built    : CentOS BuildSystem <http://bugs.centos.org> at 2021-11-24 16:33
+  Committed: Michal Domonkos <mdomonko@redhat.com> at 2021-11-01
+
+  Installed: yum-3.4.3-154.el7.centos.noarch at 2022-01-10 10:42
+  Built    : CentOS BuildSystem <http://bugs.centos.org> at 2017-08-05 19:13
+  Committed: CentOS Sources <bugs@centos.org> at 2017-08-01
+
+  Installed: yum-plugin-fastestmirror-1.1.31-42.el7.noarch at 2022-01-10 10:42
+  Built    : CentOS BuildSystem <http://bugs.centos.org> at 2017-08-11 10:23
+  Committed: Valentina Mukhamedzhanova <vmukhame@redhat.com> at 2017-03-21
+```
 ## 换源
-http://mirrors.163.com/.help/centos.html
+
+```
+备份老文件
+sudo mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup
+下载新文件
+wget -O /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo
+生成缓存
+yum makecache 
+```
+
 ## 查看是否安装了某个库
 
 [huawei@n148 tutorial]$ rpm -qa | grep boost
@@ -458,7 +522,8 @@ who|wc -l
 [huawei@10 bin]$ sh -x nusers
 ```
 * 可以在脚本文件中加入set -x即开启，set +x即关闭
-## 
+
+
 # 外部命令与内建命令
 
 ## 外部命令
