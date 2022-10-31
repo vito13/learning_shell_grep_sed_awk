@@ -186,6 +186,21 @@ Log file is /home/gordon/.vnc/h12:9.log
 	内容是vmrun -T ws $1 /data/gordon/liu_vm_n8/liu_vm_n8.vmx nogui
 	如果vnc里已经开启了vm的gui界面则上述的命令行会执行失败，那还是改用gui点启动才行
 ```
+
+## vscode免密
+
+- windows里开启终端执行ssh-keygen，会在C:\Users\xxx\ .ssh\里生成公钥与私钥文件
+- 将公钥 id_rsa.pub cp到linux的~/.ssh文件夹中，然后执行 " cat id_rsa.pub >> authorized_keys"  覆盖内容到authorized_keys文件里
+- 在vscode的config file里添加私钥文件IdentityFile项内容后即可
+
+```
+Host 172.16.121.12
+  HostName 172.16.121.12
+  User huawei
+  Port 5555
+  IdentityFile C:\Users\huaw\.ssh\id_rsa
+```
+
 ## pandoc、mdbook、latex
 ```
 如果下面执行命令：yum install cargo.x86_64 如果提示No package cargo.x86_64 available.
