@@ -4,6 +4,10 @@
 
 cat /etc/redhat-release
 
+## CentOS 7安装软件的三种方式（RPM、YUM、源码包）
+
+https://blog.csdn.net/hawava/article/details/116275103?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-0-116275103-blog-79441336.pc_relevant_recovery_v2&spm=1001.2101.3001.4242.1&utm_relevant_index=3
+
 ## 重装yum
 
 https://www.joshua317.com/article/228
@@ -325,6 +329,33 @@ $ . ~/.bashrc
 $ tlmgr option repository https://mirrors.tuna.tsinghua.edu.cn/CTAN/systems/texlive/tlnet
 $ tlmgr update --self --all --reinstall-forcibly-removed
 ```
+
+## FFmpeg
+
+- 使用yum安装编译工具 gcc cc cl
+- 安装ffmpeg时需要提前安装yasm插件
+
+``` shell
+yum -y install gcc cc cl
+wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
+tar -xvf yasm-1.3.0.tar.gz
+cd yasm-1.3.0/
+./configure && make && sudo make install
+```
+
+- 安装FFmpeg
+
+``` shell
+wget http://www.ffmpeg.org/releases/ffmpeg-4.3.2.tar.gz
+tar -xvf ffmpeg-4.3.2.tar.gz
+cd ffmpeg-4.3.2/
+./configure && make && sudo make install
+
+查看版本，验证成功
+ffmpeg -version
+
+```
+
 # 操作系统GUI
 
 ## centos图形界面的开启和关闭
